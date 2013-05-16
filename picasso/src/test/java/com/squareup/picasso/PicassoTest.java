@@ -47,8 +47,7 @@ import static org.robolectric.Robolectric.pauseMainLooper;
 import static org.robolectric.Robolectric.runUiThreadTasksIncludingDelayedTasks;
 import static org.robolectric.Robolectric.unPauseMainLooper;
 
-@RunWith(RobolectricTestRunner.class)
-@Config(manifest = Config.NONE)
+@RunWith(RobolectricTestRunner.class) @Config(manifest = Config.NONE)
 public class PicassoTest {
   private static final String URI_1 = "URI1";
   private static final String URI_2 = "URI2";
@@ -379,7 +378,6 @@ public class PicassoTest {
 
     Picasso picasso = create(LOADER_ANSWER, BITMAP1_ANSWER);
     picasso.load(URI_1).placeholder(android.R.drawable.ic_delete).into(target);
-
 
     ArgumentCaptor<PicassoDrawable> actual = ArgumentCaptor.forClass(PicassoDrawable.class);
     verify(target).setImageDrawable(actual.capture());
@@ -970,7 +968,7 @@ public class PicassoTest {
     doAnswer(decoderAnswer).when(picasso)
         .decodeContentStream(any(Uri.class), any(PicassoBitmapOptions.class));
     doAnswer(decoderAnswer).when(picasso)
-        .decodeStream(any(InputStream.class), any(PicassoBitmapOptions.class));
+        .decodeStream(any(InputStream.class), anyBoolean(), any(PicassoBitmapOptions.class));
     doAnswer(decoderAnswer).when(picasso)
         .decodeResource(any(Resources.class), anyInt(), any(PicassoBitmapOptions.class));
     return picasso;

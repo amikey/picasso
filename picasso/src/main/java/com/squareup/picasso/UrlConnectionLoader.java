@@ -48,6 +48,10 @@ public class UrlConnectionLoader implements Loader {
     return new Response(connection.getInputStream(), fromCache);
   }
 
+  @Override public boolean hasDiskCache() {
+    return cache != null;
+  }
+
   private static void installCacheIfNeeded(Context context) {
     // DCL + volatile should be safe after Java 5.
     if (cache == null) {

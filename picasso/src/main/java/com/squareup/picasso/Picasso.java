@@ -218,8 +218,16 @@ public class Picasso {
     }
   }
 
-  Bitmap decodeStream(InputStream stream, PicassoBitmapOptions bitmapOptions) {
+  Bitmap decodeStream(InputStream stream, boolean cached, PicassoBitmapOptions bitmapOptions) {
     if (stream == null) return null;
+    if (cached) {
+      if (bitmapOptions == null) {
+        bitmapOptions = new PicassoBitmapOptions();
+      }
+      bitmapOptions.inJustDecodeBounds = true;
+      BitmapFactory.decodeStream(stream, null, bitmapOptions);
+      calculateInSampleSize(bitmapOptions);
+    }
     synchronized (DECODE_LOCK) {
       return BitmapFactory.decodeStream(stream, null, bitmapOptions);
     }
@@ -307,7 +315,7 @@ public class Picasso {
           if (response == null) {
             return null;
           }
-          result = decodeStream(response.stream, options);
+          result = decodeStream(response.stream, response.cached, options);
         } finally {
           if (response != null && response.stream != null) {
             try {

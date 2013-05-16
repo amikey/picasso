@@ -17,6 +17,9 @@ public interface Loader {
    */
   Response load(String url, boolean localCacheOnly) throws IOException;
 
+  /** Returns <code>true</code> if a disk cache is available. */
+  boolean hasDiskCache();
+
   /** Response stream and info. */
   class Response {
     final InputStream stream;
