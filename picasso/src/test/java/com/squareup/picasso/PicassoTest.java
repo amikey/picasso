@@ -202,7 +202,7 @@ public class PicassoTest {
 
     verifyZeroInteractions(target);
     executor.flush();
-    verify(target).onSuccess(bitmap1);
+    verify(target).onImageLoaded(bitmap1);
     assertThat(picasso.targetsToRequests).isEmpty();
   }
 
@@ -214,7 +214,7 @@ public class PicassoTest {
 
     verifyZeroInteractions(target);
     executor.flush();
-    verify(target).onSuccess(bitmap1);
+    verify(target).onImageLoaded(bitmap1);
     assertThat(picasso.targetsToRequests).isEmpty();
   }
 
@@ -244,7 +244,7 @@ public class PicassoTest {
 
     verifyZeroInteractions(target);
     executor.flush();
-    verify(target).onSuccess(bitmap1);
+    verify(target).onImageLoaded(bitmap1);
     assertThat(picasso.targetsToRequests).isEmpty();
   }
 
@@ -292,7 +292,7 @@ public class PicassoTest {
 
     verifyZeroInteractions(target);
     executor.flush();
-    verify(target).onSuccess(bitmap1);
+    verify(target).onImageLoaded(bitmap1);
     assertThat(picasso.targetsToRequests).isEmpty();
   }
 
@@ -322,7 +322,7 @@ public class PicassoTest {
 
     verifyZeroInteractions(target);
     executor.flush();
-    verify(target).onSuccess(bitmap1);
+    verify(target).onImageLoaded(bitmap1);
     assertThat(picasso.targetsToRequests).isEmpty();
   }
 
@@ -350,7 +350,7 @@ public class PicassoTest {
 
     verifyZeroInteractions(target);
     executor.flush();
-    verify(target).onSuccess(bitmap1);
+    verify(target).onImageLoaded(bitmap1);
     assertThat(picasso.targetsToRequests).isEmpty();
   }
 

@@ -13,11 +13,11 @@ import static org.junit.Assert.fail;
 public class TargetRequestTest {
   @Test public void recyclingInSuccessThrowsException() {
     Target recycler = new Target() {
-      @Override public void onSuccess(Bitmap bitmap) {
+      @Override public void onImageLoaded(Bitmap bitmap) {
         bitmap.recycle();
       }
 
-      @Override public void onError() {
+      @Override public void onImageLoadFailed() {
         throw new AssertionError();
       }
     };

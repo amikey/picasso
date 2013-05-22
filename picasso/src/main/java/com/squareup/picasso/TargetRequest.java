@@ -28,7 +28,7 @@ final class TargetRequest extends Request {
     }
     Target target = getTarget();
     if (target != null) {
-      target.onSuccess(result);
+      target.onImageLoaded(result);
       if (result.isRecycled()) {
         throw new IllegalStateException("Target callback must not recycle bitmap!");
       }
@@ -40,6 +40,6 @@ final class TargetRequest extends Request {
     if (target == null) {
       return;
     }
-    target.onError();
+    target.onImageLoadFailed();
   }
 }

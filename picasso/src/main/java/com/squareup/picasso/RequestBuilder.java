@@ -329,7 +329,7 @@ public class RequestBuilder {
     String requestKey = createKey(path, resourceId, options, transformations);
     Bitmap bitmap = picasso.quickMemoryCacheCheck(target, requestKey);
     if (bitmap != null) {
-      target.onSuccess(bitmap);
+      target.onImageLoaded(bitmap);
       return;
     }
 
