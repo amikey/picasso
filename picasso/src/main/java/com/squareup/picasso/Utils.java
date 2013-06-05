@@ -12,6 +12,7 @@ import android.os.Looper;
 import android.os.Process;
 import android.os.StatFs;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,6 +30,7 @@ import static android.os.Build.VERSION.SDK_INT;
 import static android.os.Build.VERSION_CODES.HONEYCOMB_MR1;
 import static android.os.Process.THREAD_PRIORITY_BACKGROUND;
 import static android.provider.ContactsContract.Contacts.openContactPhotoInputStream;
+import static android.provider.Settings.System.AIRPLANE_MODE_ON;
 
 final class Utils {
   static final String THREAD_PREFIX = "Picasso-";
@@ -237,6 +239,22 @@ final class Utils {
       return ContactPhotoStreamIcs.get(contentResolver, uri);
     }
   }
+
+  static boolean isAirplaneModeOn(Context context) {
+    ContentResolver contentResolver = context.getContentResolver();
+    //if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
+      return Settings.System.getInt(contentResolver, AIRPLANE_MODE_ON, 0) != 0;
+    //} else {
+    //  return SettingsGlobalJBMR2.isAirplaneModeOn(contentResolver);
+    //}
+  }
+
+  // TODO relies on compiling with API 17.
+  //private static class SettingsGlobalJBMR2 {
+  //  static boolean isAirplaneModeOn(ContentResolver contentResolver) {
+  //    return Settings.Global.getInt(contentResolver, AIRPLANE_MODE_ON, 0) != 0;
+  //  }
+  //}
 
   private static class ActivityManagerHoneycomb {
     static int getLargeMemoryClass(ActivityManager activityManager) {

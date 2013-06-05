@@ -1,12 +1,18 @@
 package com.squareup.picasso;
 
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -18,11 +24,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static android.content.ContentResolver.SCHEME_ANDROID_RESOURCE;
 import static android.content.ContentResolver.SCHEME_CONTENT;
 import static android.content.ContentResolver.SCHEME_FILE;
+import static android.content.Context.CONNECTIVITY_SERVICE;
+import static android.content.Intent.ACTION_AIRPLANE_MODE_CHANGED;
+import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
 import static android.provider.ContactsContract.Contacts;
 import static com.squareup.picasso.Loader.Response;
 import static com.squareup.picasso.Utils.calculateInSampleSize;
@@ -38,6 +46,7 @@ public class Picasso {
   private static final int REQUEST_COMPLETE = 1;
   private static final int REQUEST_RETRY = 2;
   private static final int REQUEST_DECODE_FAILED = 3;
+  private static final String EXTRA_AIRPLANE_STATE = "state";
 
   /**
    * Global lock for bitmap decoding to ensure that we are only are decoding one at a time. Since
@@ -93,6 +102,7 @@ public class Picasso {
   final Listener listener;
   final Stats stats;
   final Map<Object, Request> targetsToRequests;
+  final NetworkBroadcastReceiver receiver;
 
   boolean debugging;
 
@@ -105,6 +115,55 @@ public class Picasso {
     this.listener = listener;
     this.stats = stats;
     this.targetsToRequests = new WeakHashMap<Object, Request>();
+
+    receiver = new NetworkBroadcastReceiver(context, service);
+    receiver.register();
+  }
+
+  private static class NetworkBroadcastReceiver extends BroadcastReceiver {
+    private final Context context;
+    private final PicassoExecutorService service;
+    private final ConnectivityManager connectivityManager;
+
+    private boolean isAirplaneModeOn = false;
+    private boolean isConnectedOrConnecting = true;
+
+    NetworkBroadcastReceiver(Context context, ExecutorService service) {
+      this.context = context;
+
+      if (service instanceof PicassoExecutorService) {
+        this.service = (PicassoExecutorService) service;
+      } else {
+        this.service = null;
+      }
+
+      connectivityManager = (ConnectivityManager) context.getSystemService(CONNECTIVITY_SERVICE);
+
+      isAirplaneModeOn = Utils.isAirplaneModeOn(this.context);
+    }
+
+    void register() {
+      IntentFilter filter = new IntentFilter();
+      filter.addAction(ACTION_AIRPLANE_MODE_CHANGED);
+      filter.addAction(CONNECTIVITY_ACTION);
+      context.registerReceiver(this, filter);
+    }
+
+    public boolean hasConnectivity() {
+      return isConnectedOrConnecting && isAirplaneModeOn;
+    }
+
+    @Override public void onReceive(Context context, Intent intent) {
+      String action = intent.getAction();
+      Bundle extras = intent.getExtras();
+
+      if (ACTION_AIRPLANE_MODE_CHANGED.equals(action)) {
+        isAirplaneModeOn = extras.getBoolean(EXTRA_AIRPLANE_STATE, false);
+      } else if (CONNECTIVITY_ACTION.equals(action)) {
+        NetworkInfo info = connectivityManager.getActiveNetworkInfo();
+        isConnectedOrConnecting = info != null && info.isConnectedOrConnecting();
+      }
+    }
   }
 
   /** Cancel any existing requests for the specified target {@link ImageView}. */
@@ -195,6 +254,11 @@ public class Picasso {
     Object target = request.getTarget();
     if (target == null) return;
 
+    // If the device is in airplane mode, skip hitting the network and only try the disk cache.
+    if (receiver.hasConnectivity()) {
+      request.retryCount = 0;
+    }
+
     cancelExistingRequest(target, request.uri);
 
     targetsToRequests.put(target, request);
@@ -253,7 +317,7 @@ public class Picasso {
   void retry(Request request) {
     if (request.retryCancelled) return;
 
-    if (request.retryCount > 0) {
+    if (request.retryCount > 0 && !receiver.hasConnectivity()) {
       request.retryCount--;
       submit(request);
     } else {
@@ -608,7 +672,7 @@ public class Picasso {
         memoryCache = new LruCache(context);
       }
       if (service == null) {
-        service = Executors.newFixedThreadPool(3, new Utils.PicassoThreadFactory());
+        service = new PicassoExecutorService();
       }
 
       Stats stats = new Stats(memoryCache);
