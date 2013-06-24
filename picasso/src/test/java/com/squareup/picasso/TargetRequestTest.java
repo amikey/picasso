@@ -32,7 +32,7 @@ public class TargetRequestTest {
 
   @Test public void recyclingInSuccessThrowsException() {
     Target recycler = new Target() {
-      @Override public void onSuccess(Bitmap bitmap) {
+      @Override public void onSuccess(Bitmap bitmap, LoadedFrom loadedFrom) {
         bitmap.recycle();
       }
 
@@ -41,7 +41,7 @@ public class TargetRequestTest {
       }
     };
     Picasso picasso = mock(Picasso.class);
-    TargetRequest tr = new TargetRequest(picasso, URL, 0, recycler, false, null, null, false);
+    TargetRequest tr = new TargetRequest(picasso, URL, 0, recycler, null, null, false);
     tr.result = Bitmap.createBitmap(10, 10, null);
     try {
       tr.complete();

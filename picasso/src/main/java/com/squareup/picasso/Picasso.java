@@ -231,14 +231,17 @@ public class Picasso {
     return stats.createSnapshot();
   }
 
-  void submit(Request request) {
+  void submitWithTarget(Request request) {
     Object target = request.getTarget();
     if (target == null) return;
 
     cancelExistingRequest(target, request.uri);
 
     targetsToRequests.put(target, request);
+    submit(request);
+  }
 
+  void submit(Request request) {
     request.future = service.submit(request);
   }
 
@@ -292,15 +295,7 @@ public class Picasso {
   }
 
   void retry(Request request) {
-    if (request.retryCancelled) return;
-
-    if (request.retryCount > 0) {
-      request.retryCount--;
-      submit(request);
-    } else {
-      targetsToRequests.remove(request.getTarget());
-      request.error();
-    }
+    request.retry();
   }
 
   void error(Request request) {
@@ -353,11 +348,7 @@ public class Picasso {
 
   private void cancelExistingRequest(Request request, Uri uri) {
     if (request != null) {
-      if (!request.future.isDone()) {
-        request.future.cancel(true);
-      } else if (uri == null || !uri.equals(request.uri)) {
-        request.retryCancelled = true;
-      }
+      request.cancel(uri);
     }
   }
 
@@ -366,7 +357,7 @@ public class Picasso {
 
     Bitmap cached = cache.get(request.key);
     if (cached != null) {
-      request.loadedFrom = Request.LoadedFrom.MEMORY;
+      request.loadedFrom = LoadedFrom.MEMORY;
     }
     return cached;
   }
@@ -382,7 +373,7 @@ public class Picasso {
 
     if (resourceId != 0) {
       result = decodeResource(context.getResources(), resourceId, options);
-      request.loadedFrom = Request.LoadedFrom.DISK;
+      request.loadedFrom = LoadedFrom.DISK;
     } else {
       String scheme = uri.getScheme();
       if (SCHEME_CONTENT.equals(scheme)) {
@@ -395,14 +386,14 @@ public class Picasso {
           exifRotation = Utils.getContentProviderExifRotation(contentResolver, uri);
           result = decodeContentStream(uri, options);
         }
-        request.loadedFrom = Request.LoadedFrom.DISK;
+        request.loadedFrom = LoadedFrom.DISK;
       } else if (SCHEME_FILE.equals(scheme)) {
         exifRotation = Utils.getFileExifRotation(uri.getPath());
         result = decodeContentStream(uri, options);
-        request.loadedFrom = Request.LoadedFrom.DISK;
+        request.loadedFrom = LoadedFrom.DISK;
       } else if (SCHEME_ANDROID_RESOURCE.equals(scheme)) {
         result = decodeContentStream(uri, options);
-        request.loadedFrom = Request.LoadedFrom.DISK;
+        request.loadedFrom = LoadedFrom.DISK;
       } else {
         Response response = null;
         try {
@@ -419,7 +410,7 @@ public class Picasso {
             }
           }
         }
-        request.loadedFrom = response.cached ? Request.LoadedFrom.DISK : Request.LoadedFrom.NETWORK;
+        request.loadedFrom = response.cached ? LoadedFrom.DISK : LoadedFrom.NETWORK;
       }
     }
 
@@ -431,8 +422,9 @@ public class Picasso {
 
     // If the caller wants deferred resize, try to load the target ImageView's measured size.
     if (options != null && options.deferredResize) {
-      ImageView target = request.target.get();
-      if (target != null) {
+      Object o = request.target.get();
+      if (o instanceof ImageView) {
+        ImageView target = (ImageView) o;
         int targetWidth = target.getMeasuredWidth();
         int targetHeight = target.getMeasuredHeight();
         if (targetWidth != 0 && targetHeight != 0) {

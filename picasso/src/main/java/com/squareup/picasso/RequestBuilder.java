@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.TestOnly;
 
-import static com.squareup.picasso.Request.LoadedFrom.MEMORY;
+import static com.squareup.picasso.LoadedFrom.MEMORY;
 import static com.squareup.picasso.Utils.checkNotMain;
 import static com.squareup.picasso.Utils.createKey;
 
@@ -42,8 +42,8 @@ public class RequestBuilder {
   private boolean noFade;
   private boolean hasNullPlaceholder;
   private int placeholderResId;
-  private Drawable placeholderDrawable;
   private int errorResId;
+  private Drawable placeholderDrawable;
   private Drawable errorDrawable;
 
   RequestBuilder(Picasso picasso, Uri uri, int resourceId) {
@@ -297,18 +297,16 @@ public class RequestBuilder {
     }
 
     Request request =
-        new Request(picasso, uri, resourceId, null, options, transformations, skipCache, false, 0,
+        new FetchRequest(picasso, uri, resourceId, options, transformations, skipCache, false, 0,
             null);
     return picasso.resolveRequest(request);
   }
 
-  /**
-   * Asynchronously fulfills the request into the specified {@link Target}.
-   * <p/>
-   * <em>Note:</em> This method keeps a strong reference to the {@link Target} instance.
-   */
-  public void fetch(Target target) {
-    makeTargetRequest(target, true);
+  public void fetch() {
+    Request request =
+        new FetchRequest(picasso, uri, resourceId, options, transformations, skipCache, noFade,
+            errorResId, errorDrawable);
+    picasso.submit(request);
   }
 
   /**
@@ -318,7 +316,24 @@ public class RequestBuilder {
    * automatically support object recycling.
    */
   public void into(Target target) {
-    makeTargetRequest(target, false);
+    if (target == null) {
+      throw new IllegalArgumentException("Target must not be null.");
+    }
+    if (uri == null && resourceId == 0) {
+      picasso.cancelRequest(target);
+      return;
+    }
+
+    String requestKey = createKey(uri, resourceId, options, transformations);
+    Bitmap bitmap = picasso.quickMemoryCacheCheck(target, uri, requestKey);
+    if (bitmap != null) {
+      target.onSuccess(bitmap, LoadedFrom.MEMORY);
+      return;
+    }
+
+    Request request =
+        new TargetRequest(picasso, uri, resourceId, target, options, transformations, skipCache);
+    picasso.submitWithTarget(request);
   }
 
   /**
@@ -328,6 +343,11 @@ public class RequestBuilder {
    * recycling.
    */
   public void into(ImageView target) {
+    into(target, null);
+  }
+
+  // TODO
+  public void into(ImageView target, Callback callback) {
     if (target == null) {
       throw new IllegalArgumentException("Target must not be null.");
     }
@@ -354,9 +374,9 @@ public class RequestBuilder {
 
     if (hasItemToLoad) {
       Request request =
-          new Request(picasso, uri, resourceId, target, options, transformations, skipCache, noFade,
-              errorResId, errorDrawable);
-      picasso.submit(request);
+          new ImageViewRequest(picasso, uri, resourceId, target, options, transformations,
+              skipCache, noFade, errorResId, errorDrawable, callback);
+      picasso.submitWithTarget(request);
     } else {
       picasso.cancelRequest(target);
     }
@@ -374,13 +394,13 @@ public class RequestBuilder {
     String requestKey = createKey(uri, resourceId, options, transformations);
     Bitmap bitmap = picasso.quickMemoryCacheCheck(target, uri, requestKey);
     if (bitmap != null) {
-      target.onSuccess(bitmap);
+      target.onSuccess(bitmap, LoadedFrom.MEMORY);
       return;
     }
 
     Request request =
-        new TargetRequest(picasso, uri, resourceId, target, strong, options, transformations,
-            skipCache);
-    picasso.submit(request);
+        new TargetRequest(picasso, uri, resourceId, target, options, transformations, skipCache);
+    picasso.submitWithTarget(request);
   }
 }
+

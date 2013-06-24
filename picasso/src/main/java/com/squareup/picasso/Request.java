@@ -15,12 +15,9 @@
  */
 package com.squareup.picasso;
 
-import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.widget.ImageView;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.util.List;
@@ -28,20 +25,8 @@ import java.util.concurrent.Future;
 
 import static com.squareup.picasso.Utils.createKey;
 
-class Request implements Runnable {
+abstract class Request<T> implements Runnable {
   static final int DEFAULT_RETRY_COUNT = 2;
-
-  enum LoadedFrom {
-    MEMORY(Color.GREEN),
-    DISK(Color.YELLOW),
-    NETWORK(Color.RED);
-
-    final int debugColor;
-
-    private LoadedFrom(int debugColor) {
-      this.debugColor = debugColor;
-    }
-  }
 
   static class RequestWeakReference<T> extends WeakReference<T> {
     final Request request;
@@ -55,7 +40,7 @@ class Request implements Runnable {
   final Picasso picasso;
   final Uri uri;
   final int resourceId;
-  final WeakReference<ImageView> target;
+  final WeakReference<T> target;
   final PicassoBitmapOptions options;
   final List<Transformation> transformations;
   final boolean skipCache;
@@ -70,13 +55,13 @@ class Request implements Runnable {
   int retryCount;
   boolean retryCancelled;
 
-  Request(Picasso picasso, Uri uri, int resourceId, ImageView imageView,
-      PicassoBitmapOptions options, List<Transformation> transformations, boolean skipCache,
-      boolean noFade, int errorResId, Drawable errorDrawable) {
+  Request(Picasso picasso, Uri uri, int resourceId, T target, PicassoBitmapOptions options,
+      List<Transformation> transformations, boolean skipCache, boolean noFade, int errorResId,
+      Drawable errorDrawable) {
     this.picasso = picasso;
     this.uri = uri;
     this.resourceId = resourceId;
-    this.target = new RequestWeakReference<ImageView>(this, imageView, picasso.referenceQueue);
+    this.target = new RequestWeakReference<T>(this, target, picasso.referenceQueue);
     this.options = options;
     this.transformations = transformations;
     this.skipCache = skipCache;
@@ -87,37 +72,7 @@ class Request implements Runnable {
     this.key = createKey(this);
   }
 
-  Object getTarget() {
-    return target.get();
-  }
-
-  void complete() {
-    if (result == null) {
-      throw new AssertionError(
-          String.format("Attempted to complete request with no result!\n%s", this));
-    }
-
-    ImageView target = this.target.get();
-    if (target != null) {
-      Context context = picasso.context;
-      boolean debugging = picasso.debugging;
-      PicassoDrawable.setBitmap(target, context, result, loadedFrom, noFade, debugging);
-    }
-  }
-
-  void error() {
-    ImageView target = this.target.get();
-    if (target == null) {
-      return;
-    }
-    if (errorResId != 0) {
-      target.setImageResource(errorResId);
-    } else if (errorDrawable != null) {
-      target.setImageDrawable(errorDrawable);
-    }
-  }
-
-  @Override public void run() {
+  @Override public final void run() {
     try {
       // Change the thread name to contain the target URL for debugging purposes.
       Thread.currentThread().setName(Utils.THREAD_PREFIX + getName());
@@ -136,9 +91,8 @@ class Request implements Runnable {
     }
   }
 
-  private String getName() {
-    Uri uri = this.uri;
-    return uri != null ? uri.getPath() : Integer.toString(resourceId);
+  T getTarget() {
+    return target.get();
   }
 
   @Override public String toString() {
@@ -168,6 +122,30 @@ class Request implements Runnable {
         + ']';
   }
 
+  void retry() {
+    if (retryCancelled) return;
+
+    if (retryCount > 0) {
+      retryCount--;
+      picasso.submitWithTarget(this);
+    } else {
+      picasso.targetsToRequests.remove(target.get());
+      error();
+    }
+  }
+
+  void cancel(Uri uri) {
+    if (!future.isDone()) {
+      future.cancel(true);
+    } else if (uri == null || !uri.equals(this.uri)) {
+      retryCancelled = true;
+    }
+  }
+
+  abstract void complete();
+
+  abstract void error();
+
   String transformationKeys() {
     if (transformations == null) {
       return "[]";
@@ -188,5 +166,10 @@ class Request implements Runnable {
     sb.append(']');
 
     return sb.toString();
+  }
+
+  private String getName() {
+    Uri uri = this.uri;
+    return uri != null ? uri.getPath() : Integer.toString(resourceId);
   }
 }

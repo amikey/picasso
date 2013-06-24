@@ -219,16 +219,6 @@ public class RequestBuilderTest {
     verifyZeroInteractions(picasso);
   }
 
-  @Test public void noImageFetchTargetDoesNothing() {
-    Picasso picasso = mock(Picasso.class);
-    Target target = mock(Target.class);
-
-    new RequestBuilder(picasso, null, 0).fetch(target);
-
-    verify(picasso).cancelRequest(target);
-    verifyZeroInteractions(target);
-  }
-
   @Test public void noImageIntoTargetDoesNothing() {
     Picasso picasso = mock(Picasso.class);
     Target target = mock(Target.class);
