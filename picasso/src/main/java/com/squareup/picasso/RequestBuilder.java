@@ -348,10 +348,22 @@ public class RequestBuilder {
   /**
    * Asynchronously fulfills the request into the specified {@link ImageView}.
    * <p/>
-   * This method keeps a weak reference to the view and will automatically support object
-   * recycling.
+   * <em>Note:</em> This method keeps a weak reference to the {@link ImageView} instance and will
+   * automatically support object recycling.
    */
   public void into(ImageView target) {
+    into(target, null);
+  }
+
+  /**
+   * Asynchronously fulfills the request into the specified {@link ImageView}.
+   * <p/>
+   * <em>Note:</em> The {@link Callback} param is a strong reference and will prevent your
+   * {@link android.app.Activity} or {@link android.app.Fragment} from being garbage collected. If
+   * you use this method, tt is <b>strongly</b> recommended you invoke an adjacent
+   * {@link Picasso#cancelRequest(android.widget.ImageView)} call to prevent leaking.
+   */
+  public void into(ImageView target, Callback callback) {
     if (target == null) {
       throw new IllegalArgumentException("Target must not be null.");
     }
@@ -376,7 +388,7 @@ public class RequestBuilder {
 
     Request request =
         new ImageViewRequest(picasso, uri, resourceId, target, options, transformations, skipCache,
-            noFade, errorResId, errorDrawable, requestKey, null);
+            noFade, errorResId, errorDrawable, requestKey, callback);
 
     picasso.submit(request);
   }
