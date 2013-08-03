@@ -83,6 +83,14 @@ abstract class Request<T> {
     return key;
   }
 
+  PicassoBitmapOptions getOptions() {
+    return options;
+  }
+
+  List<Transformation> getTransformations() {
+    return transformations;
+  }
+
   int getResourceId() {
     return resourceId;
   }

@@ -30,6 +30,7 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowBitmap;
 import org.robolectric.shadows.ShadowMatrix;
 
+import static android.content.ContentResolver.SCHEME_ANDROID_RESOURCE;
 import static android.graphics.Bitmap.Config.ARGB_8888;
 import static com.squareup.picasso.BitmapHunter.forRequest;
 import static com.squareup.picasso.BitmapHunter.transformResult;
@@ -58,8 +59,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.robolectric.Robolectric.shadowOf;
 
-@RunWith(RobolectricTestRunner.class)
-@Config(manifest = Config.NONE)
+@RunWith(RobolectricTestRunner.class) @Config(manifest = Config.NONE)
 public class BitmapHunterTest {
 
   @Mock Context context;
@@ -106,11 +106,22 @@ public class BitmapHunterTest {
   @Test public void huntReturnsWhenResultInCache() throws Exception {
     when(cache.get(URI_KEY_1)).thenReturn(BITMAP_1);
     Request request = mockRequest(URI_KEY_1, URI_1, mockImageViewTarget());
-    BitmapHunter hunter = spy(new TestableBitmapHunter(picasso, dispatcher, cache, request, BITMAP_1));
+    BitmapHunter hunter =
+        spy(new TestableBitmapHunter(picasso, dispatcher, cache, request, BITMAP_1));
     Bitmap result = hunter.hunt();
     verify(cache).get(URI_KEY_1);
     verify(hunter, never()).decode(URI_1, request.options, hunter.retryCount);
     assertThat(result).isEqualTo(BITMAP_1);
+  }
+
+  @Test public void huntWithOptionsPerformsTransformations() throws Exception {
+    PicassoBitmapOptions options = new PicassoBitmapOptions();
+    Request request = mockRequest(URI_KEY_1, URI_1, mockImageViewTarget());
+    when(request.getOptions()).thenReturn(options);
+    BitmapHunter hunter = new TestableBitmapHunter(picasso, dispatcher, cache, request, BITMAP_1));
+    hunter.hunt();
+
+    verify(BitmapHunter).transformResult(options, BITMAP_1, 0);
   }
 
   @Test public void attachRequest() throws Exception {
@@ -146,40 +157,47 @@ public class BitmapHunterTest {
 
   @Test public void forContentProviderRequest() throws Exception {
     Request request = mockRequest(CONTENT_KEY_1, CONTENT_1_URL);
-    BitmapHunter hunter = forRequest(context, picasso, dispatcher, cache, request, downloader,
-        false);
+    BitmapHunter hunter =
+        forRequest(context, picasso, dispatcher, cache, request, downloader, false);
     assertThat(hunter).isInstanceOf(ContentProviderBitmapHunter.class);
   }
 
   @Test public void forContactsPhotoRequest() throws Exception {
     Request request = mockRequest(CONTACT_KEY_1, CONTACT_URI_1);
-    BitmapHunter hunter = forRequest(context, picasso, dispatcher, cache, request, downloader,
-        false);
+    BitmapHunter hunter =
+        forRequest(context, picasso, dispatcher, cache, request, downloader, false);
     assertThat(hunter).isInstanceOf(ContactsPhotoBitmapHunter.class);
   }
 
   @Test public void forNetworkRequest() throws Exception {
     Request request = mockRequest(URI_KEY_1, URI_1);
-    BitmapHunter hunter = forRequest(context, picasso, dispatcher, cache, request, downloader,
-        false);
+    BitmapHunter hunter =
+        forRequest(context, picasso, dispatcher, cache, request, downloader, false);
     assertThat(hunter).isInstanceOf(NetworkBitmapHunter.class);
   }
 
   @Test public void forFileWithAuthorityRequest() throws Exception {
     Request request = mockRequest(FILE_KEY_1, FILE_1_URL);
-    BitmapHunter hunter = forRequest(context, picasso, dispatcher, cache, request, downloader,
-        false);
+    BitmapHunter hunter =
+        forRequest(context, picasso, dispatcher, cache, request, downloader, false);
     assertThat(hunter).isInstanceOf(FileBitmapHunter.class);
   }
 
-  @Test public void forAndroidResourceRequest() throws Exception {
+  @Test public void forAndroidResourceIdRequest() throws Exception {
     Request request = mockRequest(RESOURCE_ID_KEY_1, null, null, RESOURCE_ID_1);
-    BitmapHunter hunter = forRequest(context, picasso, dispatcher, cache, request, downloader,
-        false);
+    BitmapHunter hunter =
+        forRequest(context, picasso, dispatcher, cache, request, downloader, false);
     assertThat(hunter).isInstanceOf(ResourceBitmapHunter.class);
   }
 
-  // TODO more static forTests
+  @Test public void forAndroidResourceSchemeRequest() throws Exception {
+    Uri uri = mock(Uri.class);
+    when(uri.getScheme()).thenReturn(SCHEME_ANDROID_RESOURCE);
+    Request request = mockRequest(RESOURCE_ID_KEY_1, uri, null, 0);
+    BitmapHunter hunter =
+        forRequest(context, picasso, dispatcher, cache, request, downloader, false);
+    assertThat(hunter).isInstanceOf(ResourceBitmapHunter.class);
+  }
 
   @Test public void exifRotation() throws Exception {
     Bitmap source = Bitmap.createBitmap(10, 10, ARGB_8888);
@@ -452,7 +470,8 @@ public class BitmapHunterTest {
       this.throwException = throwException;
     }
 
-    @Override Bitmap decode(Uri uri, PicassoBitmapOptions options, int retryCount) throws IOException {
+    @Override Bitmap decode(Uri uri, PicassoBitmapOptions options, int retryCount)
+        throws IOException {
       if (throwException) {
         throw new IOException("Failed.");
       }

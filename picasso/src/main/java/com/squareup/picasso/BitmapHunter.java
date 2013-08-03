@@ -64,8 +64,8 @@ abstract class BitmapHunter implements Runnable {
     this.cache = cache;
     this.key = request.getKey();
     this.uri = request.getUri();
-    this.transformations = request.transformations;
-    this.options = request.options;
+    this.transformations = request.getTransformations();
+    this.options = request.getOptions();
     this.skipMemoryCache = request.skipCache;
     this.requests = new ArrayList<Request>(4);
     attach(request);
