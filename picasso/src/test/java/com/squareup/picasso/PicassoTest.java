@@ -32,10 +32,9 @@ import static com.squareup.picasso.Picasso.LoadedFrom.MEMORY;
 import static com.squareup.picasso.TestUtils.BITMAP_1;
 import static com.squareup.picasso.TestUtils.URI_1;
 import static com.squareup.picasso.TestUtils.URI_KEY_1;
-import static com.squareup.picasso.TestUtils.mockCanceledRequest;
+import static com.squareup.picasso.TestUtils.mockCanceledAction;
 import static com.squareup.picasso.TestUtils.mockHunter;
 import static com.squareup.picasso.TestUtils.mockImageViewTarget;
-import static com.squareup.picasso.TestUtils.mockRequest;
 import static com.squareup.picasso.TestUtils.mockTarget;
 import static org.fest.assertions.api.Assertions.assertThat;
 import static org.fest.assertions.api.Assertions.fail;
@@ -63,22 +62,22 @@ public class PicassoTest {
 
   @Before public void setUp() {
     initMocks(this);
-    picasso = new Picasso(context, dispatcher, cache, listener, stats, false);
+    picasso = new Picasso(context, dispatcher, cache, listener, requestTransformer, stats, false);
   }
 
   @Test public void submitWithNullTargetInvokesDispatcher() throws Exception {
-    Request request = mockRequest(URI_KEY_1, URI_1, null);
-    picasso.enqueueAndSubmit(request);
+    Action action = TestUtils.mockAction(URI_KEY_1, URI_1, null);
+    picasso.enqueueAndSubmit(action);
     assertThat(picasso.targetToRequest).isEmpty();
-    verify(dispatcher).dispatchSubmit(request);
+    verify(dispatcher).dispatchSubmit(action);
   }
 
   @Test public void submitWithTargetInvokesDispatcher() throws Exception {
-    Request request = mockRequest(URI_KEY_1, URI_1, mockImageViewTarget());
+    Action action = TestUtils.mockAction(URI_KEY_1, URI_1, mockImageViewTarget());
     assertThat(picasso.targetToRequest).isEmpty();
-    picasso.enqueueAndSubmit(request);
+    picasso.enqueueAndSubmit(action);
     assertThat(picasso.targetToRequest).hasSize(1);
-    verify(dispatcher).dispatchSubmit(request);
+    verify(dispatcher).dispatchSubmit(action);
   }
 
   @Test public void quickMemoryCheckReturnsBitmapIfInCache() throws Exception {
@@ -95,54 +94,54 @@ public class PicassoTest {
   }
 
   @Test public void completeInvokesSuccessOnAllSuccessfulRequests() throws Exception {
-    Request request1 = mockRequest(URI_KEY_1, URI_1, mockImageViewTarget());
-    Request request2 = mockCanceledRequest();
+    Action action1 = TestUtils.mockAction(URI_KEY_1, URI_1, mockImageViewTarget());
+    Action action2 = mockCanceledAction();
     BitmapHunter hunter = mockHunter(URI_KEY_1, BITMAP_1, false);
-    when(hunter.getRequests()).thenReturn(Arrays.asList(request1, request2));
+    when(hunter.getActions()).thenReturn(Arrays.asList(action1, action2));
     when(hunter.getLoadedFrom()).thenReturn(MEMORY);
     picasso.complete(hunter);
-    verify(request1).complete(BITMAP_1, MEMORY);
-    verify(request2, never()).complete(eq(BITMAP_1), any(Picasso.LoadedFrom.class));
+    verify(action1).complete(BITMAP_1, MEMORY);
+    verify(action2, never()).complete(eq(BITMAP_1), any(Picasso.LoadedFrom.class));
   }
 
   @Test public void completeInvokesErrorOnAllFailedRequests() throws Exception {
-    Request request1 = mockRequest(URI_KEY_1, URI_1, mockImageViewTarget());
-    Request request2 = mockCanceledRequest();
+    Action action1 = TestUtils.mockAction(URI_KEY_1, URI_1, mockImageViewTarget());
+    Action action2 = mockCanceledAction();
     BitmapHunter hunter = mockHunter(URI_KEY_1, null, false);
-    when(hunter.getRequests()).thenReturn(Arrays.asList(request1, request2));
+    when(hunter.getActions()).thenReturn(Arrays.asList(action1, action2));
     picasso.complete(hunter);
-    verify(request1).error();
-    verify(request2, never()).error();
+    verify(action1).error();
+    verify(action2, never()).error();
   }
 
   @Test public void cancelExistingRequestWithUnknownTarget() throws Exception {
     ImageView target = mockImageViewTarget();
-    Request request = mockRequest(URI_KEY_1, URI_1, target);
+    Action action = TestUtils.mockAction(URI_KEY_1, URI_1, target);
     picasso.cancelRequest(target);
-    verifyZeroInteractions(request);
+    verifyZeroInteractions(action);
     verifyZeroInteractions(dispatcher);
   }
 
   @Test public void cancelExistingRequestWithImageViewTarget() throws Exception {
     ImageView target = mockImageViewTarget();
-    Request request = mockRequest(URI_KEY_1, URI_1, target);
-    picasso.enqueueAndSubmit(request);
+    Action action = TestUtils.mockAction(URI_KEY_1, URI_1, target);
+    picasso.enqueueAndSubmit(action);
     assertThat(picasso.targetToRequest).hasSize(1);
     picasso.cancelRequest(target);
     assertThat(picasso.targetToRequest).isEmpty();
-    verify(request).cancel();
-    verify(dispatcher).dispatchCancel(request);
+    verify(action).cancel();
+    verify(dispatcher).dispatchCancel(action);
   }
 
   @Test public void cancelExistingRequestWithTarget() throws Exception {
     Target target = mockTarget();
-    Request request = mockRequest(URI_KEY_1, URI_1, target);
-    picasso.enqueueAndSubmit(request);
+    Action action = TestUtils.mockAction(URI_KEY_1, URI_1, target);
+    picasso.enqueueAndSubmit(action);
     assertThat(picasso.targetToRequest).hasSize(1);
     picasso.cancelRequest(target);
     assertThat(picasso.targetToRequest).isEmpty();
-    verify(request).cancel();
-    verify(dispatcher).dispatchCancel(request);
+    verify(action).cancel();
+    verify(dispatcher).dispatchCancel(action);
   }
 
   @Test public void shutdown() throws Exception {

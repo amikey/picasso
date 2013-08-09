@@ -37,12 +37,12 @@ import static org.mockito.Mockito.verify;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
-public class ImageViewRequestTest {
+public class ImageViewActionTest {
 
   @Test(expected = AssertionError.class)
   public void throwsErrorWithNullResult() throws Exception {
-    ImageViewRequest request =
-        new ImageViewRequest(mock(Picasso.class), URI_1, 0, mockImageViewTarget(), null, null,
+    ImageViewAction request =
+        new ImageViewAction(mock(Picasso.class), URI_1, 0, mockImageViewTarget(), null, null,
             false, false, 0, null, URI_KEY_1, null);
     request.complete(null, MEMORY);
   }
@@ -51,11 +51,11 @@ public class ImageViewRequestTest {
   public void invokesTargetAndCallbackSuccessIfTargetIsNotNull() throws Exception {
     Picasso picasso =
         new Picasso(Robolectric.application, mock(Dispatcher.class),
-            Cache.NONE, null, mock(Stats.class), true);
+            Cache.NONE, null, requestTransformer, mock(Stats.class), true);
     ImageView target = mockImageViewTarget();
     Callback callback = mockCallback();
-    ImageViewRequest request =
-        new ImageViewRequest(picasso, mock(Uri.class), 0, target, null, null, false, false, 0, null,
+    ImageViewAction request =
+        new ImageViewAction(picasso, mock(Uri.class), 0, target, null, null, false, false, 0, null,
             "", callback);
     request.complete(BITMAP_1, MEMORY);
     verify(target).setImageDrawable(any(PicassoDrawable.class));
@@ -67,8 +67,8 @@ public class ImageViewRequestTest {
     ImageView target = mockImageViewTarget();
     Callback callback = mockCallback();
     Picasso mock = mock(Picasso.class);
-    ImageViewRequest request =
-        new ImageViewRequest(mock, mock(Uri.class), 0, target, null, null, false, false,
+    ImageViewAction request =
+        new ImageViewAction(mock, mock(Uri.class), 0, target, null, null, false, false,
             RESOURCE_ID_1, null, "", callback);
     request.error();
     verify(target).setImageResource(RESOURCE_ID_1);
@@ -80,8 +80,8 @@ public class ImageViewRequestTest {
     ImageView target = mockImageViewTarget();
     Callback callback = mockCallback();
     Picasso mock = mock(Picasso.class);
-    ImageViewRequest request =
-        new ImageViewRequest(mock, mock(Uri.class), 0, target, null, null, false, false,
+    ImageViewAction request =
+        new ImageViewAction(mock, mock(Uri.class), 0, target, null, null, false, false,
             RESOURCE_ID_1, null, "", callback);
     request.error();
     verify(target).setImageResource(RESOURCE_ID_1);
@@ -94,8 +94,8 @@ public class ImageViewRequestTest {
     ImageView target = mockImageViewTarget();
     Callback callback = mockCallback();
     Picasso mock = mock(Picasso.class);
-    ImageViewRequest request =
-        new ImageViewRequest(mock, mock(Uri.class), 0, target, null, null, false, false, 0,
+    ImageViewAction request =
+        new ImageViewAction(mock, mock(Uri.class), 0, target, null, null, false, false, 0,
             errorDrawable, "", callback);
     request.error();
     verify(target).setImageDrawable(errorDrawable);

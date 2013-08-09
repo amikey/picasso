@@ -33,7 +33,7 @@ import static org.mockito.Mockito.when;
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
 @SuppressWarnings("deprecation")
-public class DeferredImageViewRequestTest {
+public class DeferredImageViewActionTest {
 
   @Test public void initAttachesLayoutListener() throws Exception {
     ImageView target = mockFitImageViewTarget(true);

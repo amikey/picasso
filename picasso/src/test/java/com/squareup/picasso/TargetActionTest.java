@@ -33,12 +33,12 @@ import static org.mockito.Mockito.verify;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
-public class TargetRequestTest {
+public class TargetActionTest {
 
   @Test(expected = AssertionError.class)
   public void throwsErrorWithNullResult() throws Exception {
-    TargetRequest request =
-        new TargetRequest(mock(Picasso.class), URI_1, 0, mockTarget(), null, null, false,
+    TargetAction request =
+        new TargetAction(mock(Picasso.class), URI_1, 0, mockTarget(), null, null, false,
             URI_KEY_1);
     request.complete(null, MEMORY);
   }
@@ -46,8 +46,8 @@ public class TargetRequestTest {
   @Test
   public void invokesSuccessIfTargetIsNotNull() throws Exception {
     Target target = mockTarget();
-    TargetRequest request =
-        new TargetRequest(mock(Picasso.class), URI_1, 0, target, null, null, false, URI_KEY_1);
+    TargetAction request =
+        new TargetAction(mock(Picasso.class), URI_1, 0, target, null, null, false, URI_KEY_1);
     request.complete(BITMAP_1, MEMORY);
     verify(target).onBitmapLoaded(BITMAP_1, MEMORY);
   }
@@ -55,8 +55,8 @@ public class TargetRequestTest {
   @Test
   public void invokesErrorIfTargetIsNotNull() throws Exception {
     Target target = mockTarget();
-    TargetRequest request =
-        new TargetRequest(mock(Picasso.class), URI_1, 0, target, null, null, false, URI_KEY_1);
+    TargetAction request =
+        new TargetAction(mock(Picasso.class), URI_1, 0, target, null, null, false, URI_KEY_1);
     request.error();
     verify(target).onBitmapFailed();
   }
@@ -72,7 +72,7 @@ public class TargetRequestTest {
       }
     };
     Picasso picasso = mock(Picasso.class);
-    TargetRequest tr = new TargetRequest(picasso, URI_1, 0, bad, null, null, false, URI_KEY_1);
+    TargetAction tr = new TargetAction(picasso, URI_1, 0, bad, null, null, false, URI_KEY_1);
     try {
       tr.complete(BITMAP_1, any(Picasso.LoadedFrom.class));
       fail();
