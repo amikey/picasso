@@ -39,9 +39,8 @@ final class TargetAction extends Action<Target> {
 
   @Override void error() {
     Target target = getTarget();
-    if (target == null) {
-      return;
+    if (target != null) {
+      target.onBitmapFailed();
     }
-    target.onBitmapFailed();
   }
 }

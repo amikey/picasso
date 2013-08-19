@@ -97,8 +97,8 @@ public class Picasso {
   private final RequestTransformer requestTransformer;
   private final Stats stats;
   final Map<Object, Action> targetToRequest = new WeakHashMap<Object, Action>();
-  final Map<ImageView, DeferredRequest> targetToDeferredRequest =
-      new WeakHashMap<ImageView, DeferredRequest>();
+  final Map<ImageView, DeferredRequestCreator> targetToDeferredRequest =
+      new WeakHashMap<ImageView, DeferredRequestCreator>();
   final ReferenceQueue<Object> referenceQueue;
   private final CleanupThread cleanupThread;
 
@@ -217,6 +217,9 @@ public class Picasso {
 
   /** Stops this instance from accepting further requests. */
   public void shutdown() {
+    if (this == singleton) {
+      throw new UnsupportedOperationException("Default singleton instance cannot be shutdown.");
+    }
     if (shutdown) {
       return;
     }
@@ -224,13 +227,10 @@ public class Picasso {
     cleanupThread.shutdown();
     stats.shutdown();
     dispatcher.shutdown();
-    for (DeferredRequest deferredRequest : targetToDeferredRequest.values()) {
-      deferredRequest.cancel();
+    for (DeferredRequestCreator deferredRequestCreator : targetToDeferredRequest.values()) {
+      deferredRequestCreator.cancel();
     }
     targetToDeferredRequest.clear();
-    if (this == singleton) {
-      singleton = null;
-    }
     shutdown = true;
   }
 
@@ -245,7 +245,7 @@ public class Picasso {
     return transformed;
   }
 
-  void defer(ImageView view, DeferredRequest request) {
+  void defer(ImageView view, DeferredRequestCreator request) {
     targetToDeferredRequest.put(view, request);
   }
 
@@ -255,7 +255,7 @@ public class Picasso {
       cancelExistingRequest(target);
       targetToRequest.put(target, action);
     }
-    dispatcher.dispatchSubmit(action);
+    submit(action);
   }
 
   void submit(Action action) {
@@ -306,9 +306,10 @@ public class Picasso {
     }
     if (target instanceof ImageView) {
       ImageView targetImageView = (ImageView) target;
-      DeferredRequest deferredRequest = targetToDeferredRequest.get(targetImageView);
-      if (deferredRequest != null) {
-        deferredRequest.cancel();
+      DeferredRequestCreator deferredRequestCreator =
+          targetToDeferredRequest.remove(targetImageView);
+      if (deferredRequestCreator != null) {
+        deferredRequestCreator.cancel();
       }
     }
   }

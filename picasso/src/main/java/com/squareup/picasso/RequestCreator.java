@@ -123,6 +123,12 @@ public class RequestCreator {
     return this;
   }
 
+  /** Internal use only. Used by {@link DeferredRequestCreator}. */
+  RequestCreator unfit() {
+    deferred = false;
+    return this;
+  }
+
   /** Resize the image to the specified dimension size. */
   public RequestCreator resizeDimen(int targetWidthResId, int targetHeightResId) {
     Resources resources = picasso.context.getResources();
@@ -292,6 +298,7 @@ public class RequestCreator {
       PicassoDrawable.setPlaceholder(target, placeholderResId, placeholderDrawable);
       return;
     }
+
     if (deferred) {
       if (data.hasSize()) {
         throw new IllegalStateException("Fit cannot be used with resize.");
@@ -300,9 +307,7 @@ public class RequestCreator {
       int measuredHeight = target.getMeasuredHeight();
       if (measuredWidth == 0 && measuredHeight == 0) {
         PicassoDrawable.setPlaceholder(target, placeholderResId, placeholderDrawable);
-        picasso.defer(target,
-            new DeferredRequest(picasso, data, target, skipMemoryCache, noFade, placeholderResId,
-                placeholderDrawable, errorResId, errorDrawable, callback));
+        picasso.defer(target, new DeferredRequestCreator(this, target));
         return;
       }
       data.resize(measuredWidth, measuredHeight);
@@ -326,8 +331,9 @@ public class RequestCreator {
 
     PicassoDrawable.setPlaceholder(target, placeholderResId, placeholderDrawable);
 
-    Action action = new ImageViewAction(picasso, target, finalData,
-        skipMemoryCache, noFade, errorResId, errorDrawable, requestKey, callback);
+    Action action =
+        new ImageViewAction(picasso, target, finalData, skipMemoryCache, noFade, errorResId,
+            errorDrawable, requestKey, callback);
 
     picasso.enqueueAndSubmit(action);
   }

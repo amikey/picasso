@@ -55,7 +55,7 @@ public final class Request {
     if (transformations == null) {
       this.transformations = null;
     } else {
-      this.transformations = unmodifiableList(new ArrayList<Transformation>(transformations));
+      this.transformations = unmodifiableList(transformations);
     }
     this.targetWidth = targetWidth;
     this.targetHeight = targetHeight;
@@ -65,22 +65,6 @@ public final class Request {
     this.rotationPivotX = rotationPivotX;
     this.rotationPivotY = rotationPivotY;
     this.hasRotationPivot = hasRotationPivot;
-  }
-
-  @Override public String toString() {
-    return "Request{" +
-        "uri=" + uri +
-        ", resourceId=" + resourceId +
-        ", transformations=" + transformations +
-        ", targetWidth=" + targetWidth +
-        ", targetHeight=" + targetHeight +
-        ", centerCrop=" + centerCrop +
-        ", centerInside=" + centerInside +
-        ", rotationDegrees=" + rotationDegrees +
-        ", rotationPivotX=" + rotationPivotX +
-        ", rotationPivotY=" + rotationPivotY +
-        ", hasRotationPivot=" + hasRotationPivot +
-        '}';
   }
 
   String getName() {
@@ -225,9 +209,8 @@ public final class Request {
       if (centerInside && targetWidth == 0) {
         throw new IllegalStateException("Center inside requires calling resize.");
       }
-      return new Request(uri, resourceId, transformations, targetWidth, targetHeight,
-          centerCrop, centerInside, rotationDegrees, rotationPivotX, rotationPivotY,
-          hasRotationPivot);
+      return new Request(uri, resourceId, transformations, targetWidth, targetHeight, centerCrop,
+          centerInside, rotationDegrees, rotationPivotX, rotationPivotY, hasRotationPivot);
     }
   }
 }

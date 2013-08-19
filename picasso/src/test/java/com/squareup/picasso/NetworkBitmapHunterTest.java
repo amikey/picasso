@@ -56,7 +56,7 @@ public class NetworkBitmapHunterTest {
     Action action = TestUtils.mockAction(URI_KEY_1, URI_1);
     NetworkBitmapHunter hunter =
         new NetworkBitmapHunter(picasso, dispatcher, cache, action, downloader, false);
-    hunter.decode(action.getUri(), null, 2);
+    hunter.decode(action.getData(), 2);
     verify(downloader).load(URI_1, false);
   }
 
@@ -64,7 +64,7 @@ public class NetworkBitmapHunterTest {
     Action action = TestUtils.mockAction(URI_KEY_1, URI_1);
     NetworkBitmapHunter hunter =
         new NetworkBitmapHunter(picasso, dispatcher, cache, action, downloader, false);
-    hunter.decode(action.getUri(), null, 0);
+    hunter.decode(action.getData(), 0);
     verify(downloader).load(URI_1, true);
   }
 
@@ -72,7 +72,7 @@ public class NetworkBitmapHunterTest {
     Action action = TestUtils.mockAction(URI_KEY_1, URI_1);
     NetworkBitmapHunter hunter =
         new NetworkBitmapHunter(picasso, dispatcher, cache, action, downloader, true);
-    hunter.decode(action.getUri(), null, hunter.retryCount);
+    hunter.decode(action.getData(), hunter.retryCount);
     verify(downloader).load(URI_1, true);
   }
 
@@ -87,7 +87,7 @@ public class NetworkBitmapHunterTest {
     NetworkBitmapHunter hunter =
         new NetworkBitmapHunter(picasso, dispatcher, cache, action, bitmapDownloader, false);
 
-    Bitmap actual = hunter.decode(action.getUri(), null, 2);
+    Bitmap actual = hunter.decode(action.getData(), 2);
     assertThat(actual).isSameAs(expected);
   }
 }

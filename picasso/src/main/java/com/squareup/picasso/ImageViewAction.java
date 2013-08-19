@@ -7,7 +7,7 @@ import android.widget.ImageView;
 
 class ImageViewAction extends Action<ImageView> {
 
-  private Callback callback;
+  Callback callback;
 
   ImageViewAction(Picasso picasso, ImageView imageView, Request data, boolean skipCache,
       boolean noFade, int errorResId, Drawable errorDrawable, String key, Callback callback) {

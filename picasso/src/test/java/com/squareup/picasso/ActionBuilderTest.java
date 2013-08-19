@@ -33,7 +33,9 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
 import static com.squareup.picasso.Picasso.LoadedFrom.MEMORY;
+import static com.squareup.picasso.Picasso.RequestTransformer.IDENTITY;
 import static com.squareup.picasso.TestUtils.BITMAP_1;
+import static com.squareup.picasso.TestUtils.TRANSFORM_REQUEST_ANSWER;
 import static com.squareup.picasso.TestUtils.URI_1;
 import static com.squareup.picasso.TestUtils.URI_KEY_1;
 import static com.squareup.picasso.TestUtils.mockFitImageViewTarget;
@@ -43,6 +45,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
 import static org.fest.assertions.api.Assertions.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -57,10 +60,11 @@ import static org.mockito.MockitoAnnotations.initMocks;
 public class ActionBuilderTest {
 
   @Mock Picasso picasso;
-  @Captor ArgumentCaptor<Action> requestCaptor;
+  @Captor ArgumentCaptor<Action> actionCaptor;
 
   @Before public void shutUp() throws Exception {
     initMocks(this);
+    when(picasso.transformRequest(any(Request.class))).thenAnswer(TRANSFORM_REQUEST_ANSWER);
   }
 
   @Test
@@ -104,8 +108,8 @@ public class ActionBuilderTest {
 
   @Test public void fetchSubmitsFetchRequest() throws Exception {
     new RequestCreator(picasso, URI_1, 0).fetch();
-    verify(picasso).enqueueAndSubmit(requestCaptor.capture());
-    assertThat(requestCaptor.getValue()).isInstanceOf(FetchAction.class);
+    verify(picasso).enqueueAndSubmit(actionCaptor.capture());
+    assertThat(actionCaptor.getValue()).isInstanceOf(FetchAction.class);
   }
 
   @Test
@@ -146,8 +150,8 @@ public class ActionBuilderTest {
   public void intoTargetAndNotInCacheSubmitsTargetRequest() throws Exception {
     Target target = mockTarget();
     new RequestCreator(picasso, URI_1, 0).into(target);
-    verify(picasso).enqueueAndSubmit(requestCaptor.capture());
-    assertThat(requestCaptor.getValue()).isInstanceOf(TargetAction.class);
+    verify(picasso).enqueueAndSubmit(actionCaptor.capture());
+    assertThat(actionCaptor.getValue()).isInstanceOf(TargetAction.class);
   }
 
   @Test
@@ -171,8 +175,8 @@ public class ActionBuilderTest {
   @Test
   public void intoImageViewWithQuickMemoryCacheCheckDoesNotSubmit() throws Exception {
     Picasso picasso =
-        spy(new Picasso(Robolectric.application, mock(Dispatcher.class), Cache.NONE, null,
-            requestTransformer, mock(Stats.class), true));
+        spy(new Picasso(Robolectric.application, mock(Dispatcher.class), Cache.NONE, null, IDENTITY,
+            mock(Stats.class), true));
     when(picasso.quickMemoryCacheCheck(URI_KEY_1)).thenReturn(BITMAP_1);
     ImageView target = mockImageViewTarget();
     new RequestCreator(picasso, URI_1, 0).into(target);
@@ -184,34 +188,34 @@ public class ActionBuilderTest {
   @Test
   public void intoImageViewSetsPlaceholderDrawable() throws Exception {
     Picasso picasso =
-        spy(new Picasso(Robolectric.application, mock(Dispatcher.class), Cache.NONE, null,
-            requestTransformer, mock(Stats.class), true));
+        spy(new Picasso(Robolectric.application, mock(Dispatcher.class), Cache.NONE, null, IDENTITY,
+            mock(Stats.class), true));
     ImageView target = mockImageViewTarget();
     Drawable placeHolderDrawable = mock(Drawable.class);
     new RequestCreator(picasso, URI_1, 0).placeholder(placeHolderDrawable).into(target);
     verify(target).setImageDrawable(placeHolderDrawable);
-    verify(picasso).enqueueAndSubmit(requestCaptor.capture());
-    assertThat(requestCaptor.getValue()).isInstanceOf(ImageViewAction.class);
+    verify(picasso).enqueueAndSubmit(actionCaptor.capture());
+    assertThat(actionCaptor.getValue()).isInstanceOf(ImageViewAction.class);
   }
 
   @Test
   public void intoImageViewSetsPlaceholderWithResourceId() throws Exception {
     Picasso picasso =
-        spy(new Picasso(Robolectric.application, mock(Dispatcher.class), Cache.NONE, null,
-            requestTransformer, mock(Stats.class), true));
+        spy(new Picasso(Robolectric.application, mock(Dispatcher.class), Cache.NONE, null, IDENTITY,
+            mock(Stats.class), true));
     ImageView target = mockImageViewTarget();
     new RequestCreator(picasso, URI_1, 0).placeholder(R.drawable.picture_frame).into(target);
     verify(target).setImageResource(R.drawable.picture_frame);
-    verify(picasso).enqueueAndSubmit(requestCaptor.capture());
-    assertThat(requestCaptor.getValue()).isInstanceOf(ImageViewAction.class);
+    verify(picasso).enqueueAndSubmit(actionCaptor.capture());
+    assertThat(actionCaptor.getValue()).isInstanceOf(ImageViewAction.class);
   }
 
   @Test
   public void intoImageViewAndNotInCacheSubmitsImageViewRequest() throws Exception {
     ImageView target = mockImageViewTarget();
     new RequestCreator(picasso, URI_1, 0).into(target);
-    verify(picasso).enqueueAndSubmit(requestCaptor.capture());
-    assertThat(requestCaptor.getValue()).isInstanceOf(ImageViewAction.class);
+    verify(picasso).enqueueAndSubmit(actionCaptor.capture());
+    assertThat(actionCaptor.getValue()).isInstanceOf(ImageViewAction.class);
   }
 
   @Test
@@ -221,12 +225,12 @@ public class ActionBuilderTest {
     when(target.getHeight()).thenReturn(0);
     new RequestCreator(picasso, URI_1, 0).fit().into(target);
     verify(picasso, never()).enqueueAndSubmit(any(Action.class));
-    verify(picasso).enqueue(requestCaptor.capture());
-    assertThat(requestCaptor.getValue()).isInstanceOf(DeferredImageViewRequest.class);
+    verify(picasso).defer(eq(target), any(DeferredRequestCreator.class));
   }
 
   @Test
   public void intoImageViewAndSkipMemoryCacheDoesNotCheckMemoryCache() throws Exception {
+    when(picasso.transformRequest(any(Request.class))).thenAnswer(TRANSFORM_REQUEST_ANSWER);
     ImageView target = mockImageViewTarget();
     new RequestCreator(picasso, URI_1, 0).skipMemoryCache().into(target);
     verify(picasso, never()).quickMemoryCacheCheck(URI_KEY_1);
@@ -235,12 +239,11 @@ public class ActionBuilderTest {
   @Test
   public void intoImageViewWithFitAndDimensionsQueuesImageViewRequest() throws Exception {
     ImageView target = mockFitImageViewTarget(true);
-    when(target.getWidth()).thenReturn(100);
-    when(target.getHeight()).thenReturn(100);
+    when(target.getMeasuredWidth()).thenReturn(100);
+    when(target.getMeasuredHeight()).thenReturn(100);
     new RequestCreator(picasso, URI_1, 0).fit().into(target);
-    verify(picasso, never()).enqueue(any(Action.class));
-    verify(picasso).enqueueAndSubmit(requestCaptor.capture());
-    assertThat(requestCaptor.getValue()).isInstanceOf(ImageViewAction.class);
+    verify(picasso).enqueueAndSubmit(actionCaptor.capture());
+    assertThat(actionCaptor.getValue()).isInstanceOf(ImageViewAction.class);
   }
 
   @Test public void invalidPlaceholderImage() throws Exception {
@@ -280,103 +283,6 @@ public class ActionBuilderTest {
     try {
       new RequestCreator().error(new ColorDrawable(0)).error(1);
       fail("Two placeholders should throw exception.");
-    } catch (IllegalStateException expected) {
-    }
-  }
-
-  @Test public void fitAndResizeMutualExclusivity() throws Exception {
-    try {
-      new RequestCreator().resize(10, 10).fit();
-      fail("Fit cannot be called after resize.");
-    } catch (IllegalStateException expected) {
-    }
-    try {
-      new RequestCreator().fit().resize(10, 10);
-      fail("Resize cannot be called after fit.");
-    } catch (IllegalStateException expected) {
-    }
-  }
-
-  @Test(expected = IllegalStateException.class)
-  public void resizeCanOnlyBeCalledOnce() throws Exception {
-    new RequestCreator().resize(10, 10).resize(5, 5);
-  }
-
-  @Test public void defaultValuesIgnored() throws Exception {
-    RequestCreator b = new RequestCreator();
-    b.scale(1);
-    assertThat(b.options).isNull();
-    b.scale(1, 1);
-    assertThat(b.options).isNull();
-    b.rotate(0);
-    assertThat(b.options).isNull();
-    b.rotate(0, 40, 10);
-    assertThat(b.options).isNull();
-  }
-
-  @Test public void invalidResize() throws Exception {
-    try {
-      new RequestCreator().resize(-1, 10);
-      fail("Negative width should throw exception.");
-    } catch (IllegalArgumentException expected) {
-    }
-    try {
-      new RequestCreator().resize(10, -1);
-      fail("Negative height should throw exception.");
-    } catch (IllegalArgumentException expected) {
-    }
-    try {
-      new RequestCreator().resize(0, 10);
-      fail("Zero width should throw exception.");
-    } catch (IllegalArgumentException expected) {
-    }
-    try {
-      new RequestCreator().resize(10, 0);
-      fail("Zero height should throw exception.");
-    } catch (IllegalArgumentException expected) {
-    }
-  }
-
-  @Test public void invalidScale() throws Exception {
-    try {
-      new RequestCreator().scale(0);
-      fail("Zero scale factor should throw exception.");
-    } catch (IllegalArgumentException expected) {
-    }
-    try {
-      new RequestCreator().scale(0, 1);
-      fail("Zero scale factor should throw exception.");
-    } catch (IllegalArgumentException expected) {
-    }
-    try {
-      new RequestCreator().scale(1, 0);
-      fail("Zero scale factor should throw exception.");
-    } catch (IllegalArgumentException expected) {
-    }
-  }
-
-  @Test public void invalidCenterCrop() throws Exception {
-    try {
-      new RequestCreator().centerCrop();
-      fail("Center crop without resize should throw exception.");
-    } catch (IllegalStateException expected) {
-    }
-    try {
-      new RequestCreator().resize(10, 10).centerInside().centerCrop();
-      fail("Calling center crop after center inside should throw exception.");
-    } catch (IllegalStateException expected) {
-    }
-  }
-
-  @Test public void invalidCenterInside() throws Exception {
-    try {
-      new RequestCreator().centerInside();
-      fail("Center inside without resize should throw exception.");
-    } catch (IllegalStateException expected) {
-    }
-    try {
-      new RequestCreator().resize(10, 10).centerInside().centerCrop();
-      fail("Calling center inside after center crop should throw exception.");
     } catch (IllegalStateException expected) {
     }
   }

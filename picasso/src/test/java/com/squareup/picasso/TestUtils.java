@@ -6,6 +6,8 @@ import android.net.Uri;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import java.io.File;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import static android.provider.ContactsContract.Contacts.CONTENT_URI;
 import static android.provider.ContactsContract.Contacts.Photo.CONTENT_DIRECTORY;
@@ -14,6 +16,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestUtils {
+  static final Answer<Object> TRANSFORM_REQUEST_ANSWER = new Answer<Object>() {
+    @Override public Object answer(InvocationOnMock invocation) throws Throwable {
+      return invocation.getArguments()[0];
+    }
+  };
   static final Uri URI_1 = Uri.parse("http://example.com/1.png");
   static final Uri URI_2 = Uri.parse("http://example.com/2.png");
   static final String URI_KEY_1 = createKey(new Request.Builder(URI_1).build());
@@ -43,11 +50,11 @@ class TestUtils {
   }
 
   static Action mockAction(String key, Uri uri, Object target, int resourceId) {
+    Request request = new Request.Builder(uri, resourceId).build();
     Action action = mock(Action.class);
     when(action.getKey()).thenReturn(key);
-    when(action.getUri()).thenReturn(uri);
+    when(action.getData()).thenReturn(request);
     when(action.getTarget()).thenReturn(target);
-    when(action.getResourceId()).thenReturn(resourceId);
     when(action.getPicasso()).thenReturn(mock(Picasso.class));
     return action;
   }
@@ -84,9 +91,11 @@ class TestUtils {
   }
 
   static BitmapHunter mockHunter(String key, Bitmap result, boolean skipCache) {
+    Request data = new Request.Builder(URI_1).build();
     BitmapHunter hunter = mock(BitmapHunter.class);
     when(hunter.getKey()).thenReturn(key);
     when(hunter.getResult()).thenReturn(result);
+    when(hunter.getData()).thenReturn(data);
     when(hunter.shouldSkipMemoryCache()).thenReturn(skipCache);
     hunter.retryCount = BitmapHunter.DEFAULT_RETRY_COUNT;
     return hunter;

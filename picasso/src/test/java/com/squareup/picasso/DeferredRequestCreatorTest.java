@@ -17,45 +17,57 @@ package com.squareup.picasso;
 
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import static com.squareup.picasso.TestUtils.TRANSFORM_REQUEST_ANSWER;
 import static com.squareup.picasso.TestUtils.URI_1;
-import static com.squareup.picasso.TestUtils.URI_KEY_1;
 import static com.squareup.picasso.TestUtils.mockFitImageViewTarget;
 import static org.fest.assertions.api.Assertions.assertThat;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyByte;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.MockitoAnnotations.initMocks;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
 @SuppressWarnings("deprecation")
-public class DeferredImageViewActionTest {
+public class DeferredRequestCreatorTest {
+
+  @Captor ArgumentCaptor<Action> actionCaptor;
+
+  @Before public void setUp() throws Exception {
+    initMocks(this);
+  }
 
   @Test public void initAttachesLayoutListener() throws Exception {
     ImageView target = mockFitImageViewTarget(true);
     ViewTreeObserver observer = target.getViewTreeObserver();
-    DeferredImageViewRequest request =
-        new DeferredImageViewRequest(mock(Picasso.class), URI_1, 0, target, null, null, false,
-            false, 0, null, URI_KEY_1, null);
+    DeferredRequestCreator request = new DeferredRequestCreator(mock(RequestCreator.class), target);
     verify(observer).addOnGlobalLayoutListener(request);
   }
 
   @Test public void cancelRemovesLayoutListener() throws Exception {
     ImageView target = mockFitImageViewTarget(true);
     ViewTreeObserver observer = target.getViewTreeObserver();
-    DeferredImageViewRequest request =
-        new DeferredImageViewRequest(mock(Picasso.class), URI_1, 0, target, null, null, false,
-            false, 0, null, URI_KEY_1, null);
+    DeferredRequestCreator request = new DeferredRequestCreator(mock(RequestCreator.class), target);
     request.cancel();
     verify(observer).removeGlobalOnLayoutListener(request);
   }
 
   @Test public void onGlobalLayoutSubmitsRequestAndCleansUp() throws Exception {
     Picasso picasso = mock(Picasso.class);
+    when(picasso.transformRequest(any(Request.class))).thenAnswer(TRANSFORM_REQUEST_ANSWER);
+
+    RequestCreator creator = new RequestCreator(picasso, URI_1, 0);
 
     ImageView target = mockFitImageViewTarget(true);
     when(target.getMeasuredWidth()).thenReturn(100);
@@ -63,16 +75,15 @@ public class DeferredImageViewActionTest {
 
     ViewTreeObserver observer = target.getViewTreeObserver();
 
-    DeferredImageViewRequest request =
-        new DeferredImageViewRequest(picasso, URI_1, 0, target, new PicassoBitmapOptions(), null,
-            false, false, 0, null, URI_KEY_1, null);
-
+    DeferredRequestCreator request = new DeferredRequestCreator(creator, target);
     request.onGlobalLayout();
 
-    assertThat(request.options.targetWidth).isEqualTo(100);
-    assertThat(request.options.targetHeight).isEqualTo(100);
-    assertThat(request.options.inJustDecodeBounds).isTrue();
     verify(observer).removeGlobalOnLayoutListener(request);
-    verify(picasso).submit(request);
+    verify(picasso).enqueueAndSubmit(actionCaptor.capture());
+
+    Action value = actionCaptor.getValue();
+    assertThat(value).isInstanceOf(ImageViewAction.class);
+    assertThat(value.getData().targetWidth).isEqualTo(100);
+    assertThat(value.getData().targetHeight).isEqualTo(100);
   }
 }
