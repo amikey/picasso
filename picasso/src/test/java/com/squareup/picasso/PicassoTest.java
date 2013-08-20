@@ -24,17 +24,18 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
 import static com.squareup.picasso.Picasso.Listener;
 import static com.squareup.picasso.Picasso.LoadedFrom.MEMORY;
-import static com.squareup.picasso.Picasso.RequestTransformer.IDENTITY;
 import static com.squareup.picasso.TestUtils.BITMAP_1;
 import static com.squareup.picasso.TestUtils.URI_1;
 import static com.squareup.picasso.TestUtils.URI_KEY_1;
 import static com.squareup.picasso.TestUtils.mockAction;
 import static com.squareup.picasso.TestUtils.mockCanceledAction;
+import static com.squareup.picasso.TestUtils.mockDeferredRequestCreator;
 import static com.squareup.picasso.TestUtils.mockHunter;
 import static com.squareup.picasso.TestUtils.mockImageViewTarget;
 import static com.squareup.picasso.TestUtils.mockTarget;
@@ -45,17 +46,18 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
-@RunWith(RobolectricTestRunner.class)
-@Config(manifest = Config.NONE)
+@RunWith(RobolectricTestRunner.class) @Config(manifest = Config.NONE)
 public class PicassoTest {
 
   @Mock Context context;
   @Mock Downloader downloader;
   @Mock Dispatcher dispatcher;
+  @Mock Picasso.RequestTransformer transformer;
   @Mock Cache cache;
   @Mock Listener listener;
   @Mock Stats stats;
@@ -64,7 +66,7 @@ public class PicassoTest {
 
   @Before public void setUp() {
     initMocks(this);
-    picasso = new Picasso(context, dispatcher, cache, listener, IDENTITY, stats, false);
+    picasso = new Picasso(context, dispatcher, cache, listener, transformer, stats, false);
   }
 
   @Test public void submitWithNullTargetInvokesDispatcher() throws Exception {
@@ -109,19 +111,29 @@ public class PicassoTest {
   @Test public void completeInvokesErrorOnAllFailedRequests() throws Exception {
     Action action1 = mockAction(URI_KEY_1, URI_1, mockImageViewTarget());
     Action action2 = mockCanceledAction();
+    Exception exception = mock(Exception.class);
     BitmapHunter hunter = mockHunter(URI_KEY_1, null, false);
+    when(hunter.getException()).thenReturn(exception);
     when(hunter.getActions()).thenReturn(Arrays.asList(action1, action2));
     picasso.complete(hunter);
     verify(action1).error();
     verify(action2, never()).error();
+    verify(listener).onImageLoadFailed(picasso, URI_1, exception);
+  }
+
+  @Test public void completeSkipsIfNoActions() throws Exception {
+    BitmapHunter hunter = mockHunter(URI_KEY_1, BITMAP_1, false);
+    when(hunter.getActions()).thenReturn(java.util.Collections.<Action>emptyList());
+    picasso.complete(hunter);
+    verify(hunter).getActions();
+    verifyNoMoreInteractions(hunter);
   }
 
   @Test public void cancelExistingRequestWithUnknownTarget() throws Exception {
     ImageView target = mockImageViewTarget();
     Action action = mockAction(URI_KEY_1, URI_1, target);
     picasso.cancelRequest(target);
-    verifyZeroInteractions(action);
-    verifyZeroInteractions(dispatcher);
+    verifyZeroInteractions(action, dispatcher);
   }
 
   @Test public void cancelExistingRequestWithImageViewTarget() throws Exception {
@@ -135,6 +147,15 @@ public class PicassoTest {
     verify(dispatcher).dispatchCancel(action);
   }
 
+  @Test public void cancelExistingRequestWithDeferredImageViewTarget() throws Exception {
+    ImageView target = mockImageViewTarget();
+    DeferredRequestCreator deferredRequestCreator = mockDeferredRequestCreator();
+    picasso.targetToDeferredRequest.put(target, deferredRequestCreator);
+    picasso.cancelRequest(target);
+    verify(deferredRequestCreator).cancel();
+    assertThat(picasso.targetToDeferredRequest).isEmpty();
+  }
+
   @Test public void cancelExistingRequestWithTarget() throws Exception {
     Target target = mockTarget();
     Action action = mockAction(URI_KEY_1, URI_1, target);
@@ -144,6 +165,14 @@ public class PicassoTest {
     assertThat(picasso.targetToRequest).isEmpty();
     verify(action).cancel();
     verify(dispatcher).dispatchCancel(action);
+  }
+
+  @Test public void deferAddsToMap() throws Exception {
+    ImageView target = mockImageViewTarget();
+    DeferredRequestCreator deferredRequestCreator = mockDeferredRequestCreator();
+    assertThat(picasso.targetToDeferredRequest).isEmpty();
+    picasso.defer(target, deferredRequestCreator);
+    assertThat(picasso.targetToDeferredRequest).hasSize(1);
   }
 
   @Test public void shutdown() throws Exception {
@@ -161,6 +190,44 @@ public class PicassoTest {
     verify(stats).shutdown();
     verify(dispatcher).shutdown();
     assertThat(picasso.shutdown).isTrue();
+  }
+
+  @Test public void shutdownDisallowedOnSingletonInstance() throws Exception {
+    try {
+      Picasso picasso = Picasso.with(Robolectric.application);
+      picasso.shutdown();
+      fail("Calling shutdown() on static singleton instance should throw");
+    } catch (UnsupportedOperationException expected) {
+    }
+  }
+
+  @Test public void shutdownClearsDeferredRequests() throws Exception {
+    DeferredRequestCreator deferredRequestCreator = mockDeferredRequestCreator();
+    ImageView target = mockImageViewTarget();
+    picasso.targetToDeferredRequest.put(target, deferredRequestCreator);
+    picasso.shutdown();
+    verify(deferredRequestCreator).cancel();
+    assertThat(picasso.targetToDeferredRequest).isEmpty();
+  }
+
+  @Test public void whenTransformRequestReturnsNullThrows() throws Exception {
+    try {
+      when(transformer.transformRequest(any(Request.class))).thenReturn(null);
+      picasso.transformRequest(new Request.Builder(URI_1).build());
+      fail("Returning null from transformRequest() should throw");
+    } catch (IllegalStateException expected) {
+    }
+  }
+
+  @Test public void getSnapshotInvokesStats() throws Exception {
+    picasso.getSnapshot();
+    verify(stats).createSnapshot();
+  }
+
+  @Test public void debuggingChangesFlag() throws Exception {
+    assertThat(picasso.isDebugging()).isFalse();
+    picasso.setDebugging(true);
+    assertThat(picasso.isDebugging()).isTrue();
   }
 
   @Test public void loadThrowsWithInvalidInput() throws Exception {
@@ -232,5 +299,31 @@ public class PicassoTest {
       fail("Setting Cache twice should throw exception.");
     } catch (IllegalStateException expected) {
     }
+  }
+
+  @Test public void builderInvalidRequestTransformer() throws Exception {
+    try {
+      new Picasso.Builder(context).requestTransformer(null);
+      fail("Null request transformer should throw exception.");
+    } catch (IllegalArgumentException expected) {
+    }
+    try {
+      new Picasso.Builder(context).requestTransformer(transformer).requestTransformer(transformer);
+      fail("Setting request transformer twice should throw exception.");
+    } catch (IllegalStateException expected) {
+    }
+  }
+
+  @Test public void builderInvalidContext() throws Exception {
+    try {
+      new Picasso.Builder(null);
+      fail("Null context  should throw exception.");
+    } catch (IllegalArgumentException expected) {
+    }
+  }
+
+  @Test public void builderWithDebugging() throws Exception {
+    Picasso picasso = new Picasso.Builder(Robolectric.application).debugging(true).build();
+    assertThat(picasso.isDebugging()).isTrue();
   }
 }

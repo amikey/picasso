@@ -86,6 +86,10 @@ class TestUtils {
     return mock(Callback.class);
   }
 
+  static DeferredRequestCreator mockDeferredRequestCreator() {
+    return mock(DeferredRequestCreator.class);
+  }
+
   static NetworkInfo mockNetworkInfo() {
     return mock(NetworkInfo.class);
   }

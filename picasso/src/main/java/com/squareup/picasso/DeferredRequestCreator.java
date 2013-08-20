@@ -6,8 +6,8 @@ import java.lang.ref.WeakReference;
 
 class DeferredRequestCreator implements ViewTreeObserver.OnGlobalLayoutListener {
 
-  private final RequestCreator creator;
-  private final WeakReference<ImageView> target;
+  final RequestCreator creator;
+  final WeakReference<ImageView> target;
 
   DeferredRequestCreator(RequestCreator creator, ImageView target) {
     this.creator = creator;

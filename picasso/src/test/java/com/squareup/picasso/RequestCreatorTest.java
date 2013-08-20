@@ -38,6 +38,7 @@ import static com.squareup.picasso.TestUtils.BITMAP_1;
 import static com.squareup.picasso.TestUtils.TRANSFORM_REQUEST_ANSWER;
 import static com.squareup.picasso.TestUtils.URI_1;
 import static com.squareup.picasso.TestUtils.URI_KEY_1;
+import static com.squareup.picasso.TestUtils.mockCallback;
 import static com.squareup.picasso.TestUtils.mockFitImageViewTarget;
 import static com.squareup.picasso.TestUtils.mockImageViewTarget;
 import static com.squareup.picasso.TestUtils.mockTarget;
@@ -57,7 +58,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
-public class ActionBuilderTest {
+public class RequestCreatorTest {
 
   @Mock Picasso picasso;
   @Captor ArgumentCaptor<Action> actionCaptor;
@@ -112,12 +113,30 @@ public class ActionBuilderTest {
     assertThat(actionCaptor.getValue()).isInstanceOf(FetchAction.class);
   }
 
+  @Test public void fetchWithFitThrows() throws Exception {
+    try {
+      new RequestCreator(picasso, URI_1, 0).fit().fetch();
+      fail("Calling fetch() with fit() should throw an exception");
+    } catch (IllegalStateException expected) {
+    }
+  }
+
   @Test
   public void intoTargetWithNullThrows() throws Exception {
     try {
       new RequestCreator(picasso, URI_1, 0).into((Target) null);
       fail("Calling into() with null Target should throw exception");
     } catch (IllegalArgumentException expected) {
+    }
+  }
+
+  @Test
+  public void intoTargetWithFitThrows() throws Exception {
+    try {
+      Target target = mockTarget();
+      new RequestCreator(picasso, URI_1, 0).fit().into(target);
+      fail("Calling into() target with fit() should throw exception");
+    } catch (IllegalStateException expected) {
     }
   }
 
@@ -179,9 +198,11 @@ public class ActionBuilderTest {
             mock(Stats.class), true));
     when(picasso.quickMemoryCacheCheck(URI_KEY_1)).thenReturn(BITMAP_1);
     ImageView target = mockImageViewTarget();
-    new RequestCreator(picasso, URI_1, 0).into(target);
-    verify(picasso).cancelRequest(target);
+    Callback callback = mockCallback();
+    new RequestCreator(picasso, URI_1, 0).into(target, callback);
     verify(target).setImageDrawable(any(PicassoDrawable.class));
+    verify(callback).onSuccess();
+    verify(picasso).cancelRequest(target);
     verify(picasso, never()).enqueueAndSubmit(any(Action.class));
   }
 
@@ -229,14 +250,6 @@ public class ActionBuilderTest {
   }
 
   @Test
-  public void intoImageViewAndSkipMemoryCacheDoesNotCheckMemoryCache() throws Exception {
-    when(picasso.transformRequest(any(Request.class))).thenAnswer(TRANSFORM_REQUEST_ANSWER);
-    ImageView target = mockImageViewTarget();
-    new RequestCreator(picasso, URI_1, 0).skipMemoryCache().into(target);
-    verify(picasso, never()).quickMemoryCacheCheck(URI_KEY_1);
-  }
-
-  @Test
   public void intoImageViewWithFitAndDimensionsQueuesImageViewRequest() throws Exception {
     ImageView target = mockFitImageViewTarget(true);
     when(target.getMeasuredWidth()).thenReturn(100);
@@ -244,6 +257,72 @@ public class ActionBuilderTest {
     new RequestCreator(picasso, URI_1, 0).fit().into(target);
     verify(picasso).enqueueAndSubmit(actionCaptor.capture());
     assertThat(actionCaptor.getValue()).isInstanceOf(ImageViewAction.class);
+  }
+
+  @Test
+  public void intoImageViewAndSkipMemoryCacheDoesNotCheckMemoryCache() throws Exception {
+    ImageView target = mockImageViewTarget();
+    new RequestCreator(picasso, URI_1, 0).skipMemoryCache().into(target);
+    verify(picasso, never()).quickMemoryCacheCheck(URI_KEY_1);
+  }
+
+  @Test
+  public void intoImageViewWithFitAndResizeThrows() throws Exception {
+    try {
+      ImageView target = mockImageViewTarget();
+      new RequestCreator(picasso, URI_1, 0).fit().resize(10, 10).into(target);
+      fail("Calling into() ImageView with fit() and resize() should throw exception");
+    } catch (IllegalStateException expected) {
+    }
+  }
+
+  @Test public void invalidResize() throws Exception {
+    try {
+      new RequestCreator().resize(-1, 10);
+      fail("Negative width should throw exception.");
+    } catch (IllegalArgumentException expected) {
+    }
+    try {
+      new RequestCreator().resize(10, -1);
+      fail("Negative height should throw exception.");
+    } catch (IllegalArgumentException expected) {
+    }
+    try {
+      new RequestCreator().resize(0, 10);
+      fail("Zero width should throw exception.");
+    } catch (IllegalArgumentException expected) {
+    }
+    try {
+      new RequestCreator().resize(10, 0);
+      fail("Zero height should throw exception.");
+    } catch (IllegalArgumentException expected) {
+    }
+  }
+
+  @Test public void invalidCenterCrop() throws Exception {
+    try {
+      new RequestCreator().centerCrop();
+      fail("Center crop without resize should throw exception.");
+    } catch (IllegalStateException expected) {
+    }
+    try {
+      new RequestCreator().resize(10, 10).centerInside().centerCrop();
+      fail("Calling center crop after center inside should throw exception.");
+    } catch (IllegalStateException expected) {
+    }
+  }
+
+  @Test public void invalidCenterInside() throws Exception {
+    try {
+      new RequestCreator().centerInside();
+      fail("Center inside without resize should throw exception.");
+    } catch (IllegalStateException expected) {
+    }
+    try {
+      new RequestCreator().resize(10, 10).centerInside().centerCrop();
+      fail("Calling center inside after center crop should throw exception.");
+    } catch (IllegalStateException expected) {
+    }
   }
 
   @Test public void invalidPlaceholderImage() throws Exception {

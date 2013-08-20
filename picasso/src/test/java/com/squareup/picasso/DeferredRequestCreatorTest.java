@@ -30,10 +30,11 @@ import static com.squareup.picasso.TestUtils.URI_1;
 import static com.squareup.picasso.TestUtils.mockFitImageViewTarget;
 import static org.fest.assertions.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyByte;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
@@ -61,6 +62,59 @@ public class DeferredRequestCreatorTest {
     DeferredRequestCreator request = new DeferredRequestCreator(mock(RequestCreator.class), target);
     request.cancel();
     verify(observer).removeGlobalOnLayoutListener(request);
+  }
+
+  @Test public void onLayoutSkipsIfTargetIsNull() throws Exception {
+    ImageView target = mockFitImageViewTarget(true);
+    RequestCreator creator = mock(RequestCreator.class);
+    DeferredRequestCreator request = new DeferredRequestCreator(creator, target);
+    ViewTreeObserver viewTreeObserver = target.getViewTreeObserver();
+    request.target.clear();
+    request.onGlobalLayout();
+    verifyZeroInteractions(creator);
+    verify(viewTreeObserver).addOnGlobalLayoutListener(request);
+    verifyNoMoreInteractions(viewTreeObserver);
+  }
+
+  @Test public void onLayoutSkipsIfViewTreeObserverIsDead() throws Exception {
+    ImageView target = mockFitImageViewTarget(false);
+    RequestCreator creator = mock(RequestCreator.class);
+    DeferredRequestCreator request = new DeferredRequestCreator(creator, target);
+    ViewTreeObserver viewTreeObserver = target.getViewTreeObserver();
+    request.onGlobalLayout();
+    verify(viewTreeObserver).addOnGlobalLayoutListener(request);
+    verify(viewTreeObserver).isAlive();
+    verifyNoMoreInteractions(viewTreeObserver);
+    verifyZeroInteractions(creator);
+  }
+
+  @Test public void waitsForAnotherLayoutIfWidthOrHeightIsZero() throws Exception {
+    ImageView target = mockFitImageViewTarget(true);
+    when(target.getMeasuredWidth()).thenReturn(0);
+    when(target.getMeasuredHeight()).thenReturn(0);
+    RequestCreator creator = mock(RequestCreator.class);
+    DeferredRequestCreator request = new DeferredRequestCreator(creator, target);
+    request.onGlobalLayout();
+    verify(target.getViewTreeObserver(), never()).removeGlobalOnLayoutListener(request);
+    verifyZeroInteractions(creator);
+  }
+
+  @Test public void cancelSkipsWithNullTarget() throws Exception {
+    ImageView target = mockFitImageViewTarget(true);
+    RequestCreator creator = mock(RequestCreator.class);
+    DeferredRequestCreator request = new DeferredRequestCreator(creator, target);
+    request.target.clear();
+    request.cancel();
+    verify(target.getViewTreeObserver(), never()).removeGlobalOnLayoutListener(request);
+  }
+
+
+  @Test public void cancelSkipsIfViewTreeObserverIsDead() throws Exception {
+    ImageView target = mockFitImageViewTarget(false);
+    RequestCreator creator = mock(RequestCreator.class);
+    DeferredRequestCreator request = new DeferredRequestCreator(creator, target);
+    request.cancel();
+    verify(target.getViewTreeObserver(), never()).removeGlobalOnLayoutListener(request);
   }
 
   @Test public void onGlobalLayoutSubmitsRequestAndCleansUp() throws Exception {
