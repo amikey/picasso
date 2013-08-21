@@ -3,6 +3,9 @@ package com.squareup.picasso;
 import android.content.Context;
 import android.net.NetworkInfo;
 import android.os.Handler;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,6 +20,7 @@ import static com.squareup.picasso.TestUtils.URI_1;
 import static com.squareup.picasso.TestUtils.URI_2;
 import static com.squareup.picasso.TestUtils.URI_KEY_1;
 import static com.squareup.picasso.TestUtils.URI_KEY_2;
+import static com.squareup.picasso.TestUtils.mockAction;
 import static com.squareup.picasso.TestUtils.mockHunter;
 import static com.squareup.picasso.TestUtils.mockNetworkInfo;
 import static org.fest.assertions.api.Assertions.assertThat;
@@ -135,7 +139,10 @@ public class DispatcherTest {
   }
 
   @Test public void performCompleteCleansUpAndAddsToBatch() throws Exception {
+    ArrayList<Action> actions = new ArrayList<Action>();
+    actions.add(mockAction(URI_KEY_1, URI_1));
     BitmapHunter hunter = mockHunter(URI_KEY_1, BITMAP_1, false);
+    when(hunter.getActions()).thenReturn(actions);
     dispatcher.performComplete(hunter);
     assertThat(dispatcher.hunterMap).isEmpty();
     assertThat(dispatcher.batch).hasSize(1);
@@ -149,8 +156,19 @@ public class DispatcherTest {
     assertThat(dispatcher.batch).isEmpty();
   }
 
-  @Test public void performErrorCleansUpAndAddsToBatch() throws Exception {
+  @Test public void performCompleteCleansUpAndDoesNotAddToBatchIfNoActions() throws Exception {
     BitmapHunter hunter = mockHunter(URI_KEY_1, BITMAP_1, false);
+    when(hunter.getActions()).thenReturn(Collections.<Action>emptyList());
+    dispatcher.performComplete(hunter);
+    assertThat(dispatcher.hunterMap).isEmpty();
+    assertThat(dispatcher.batch).isEmpty();
+  }
+
+  @Test public void performErrorCleansUpAndAddsToBatch() throws Exception {
+    ArrayList<Action> actions = new ArrayList<Action>();
+    actions.add(mockAction(URI_KEY_1, URI_1));
+    BitmapHunter hunter = mockHunter(URI_KEY_1, BITMAP_1, false);
+    when(hunter.getActions()).thenReturn(actions);
     dispatcher.hunterMap.put(hunter.getKey(), hunter);
     dispatcher.performError(hunter);
     assertThat(dispatcher.hunterMap).isEmpty();

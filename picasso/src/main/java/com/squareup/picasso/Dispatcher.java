@@ -199,7 +199,7 @@ class Dispatcher {
   }
 
   private void batch(BitmapHunter hunter) {
-    if (hunter.isCancelled()) {
+    if (hunter.isCancelled() || hunter.getActions().isEmpty()) {
       return;
     }
     batch.add(hunter);
