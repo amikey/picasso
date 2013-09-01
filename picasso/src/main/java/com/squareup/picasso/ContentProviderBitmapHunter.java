@@ -19,9 +19,17 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.provider.MediaStore;
 import java.io.IOException;
+
+import static android.content.ContentUris.parseId;
+import static android.provider.MediaStore.Images.Thumbnails.MICRO_KIND;
+import static android.provider.MediaStore.Images.Thumbnails.MINI_KIND;
+import static android.provider.MediaStore.Images.Thumbnails.getThumbnail;
+import static com.squareup.picasso.ContentProviderBitmapHunter.PicassoKind.MICRO;
+import static com.squareup.picasso.ContentProviderBitmapHunter.PicassoKind.MINI;
 
 class ContentProviderBitmapHunter extends ContentStreamBitmapHunter {
   private static final String[] CONTENT_ORIENTATION = new String[] {
@@ -34,11 +42,39 @@ class ContentProviderBitmapHunter extends ContentStreamBitmapHunter {
   }
 
   @Override Bitmap decode(Request data) throws IOException {
-    setExifRotation(getContentProviderExifRotation(context.getContentResolver(), data.uri));
-    return super.decodeContentStream(data);
+      ContentResolver contentResolver = context.getContentResolver();
+      setExifRotation(getContentProviderExifRotation(contentResolver, data.uri));
+
+      if (data.hasSize()) {
+          PicassoKind kind = getPicassoKind(data.targetWidth, data.targetHeight);
+          if (kind == null) {
+              Bitmap bitmap = super.decode(data);
+              return bitmap;
+          }
+
+          long id = parseId(data.uri);
+
+          BitmapFactory.Options options = new BitmapFactory.Options();
+          options.inJustDecodeBounds = true;
+
+          calculateInSampleSize(data.targetWidth, data.targetHeight, kind.width, kind.height, options);
+
+          return getThumbnail(contentResolver, id, kind.kind, options);
+      }
+
+      return super.decode(data);
   }
 
-  static int getContentProviderExifRotation(ContentResolver contentResolver, Uri uri) {
+    static PicassoKind getPicassoKind(int targetWidth, int targetHeight) {
+        if (targetWidth <= 96 && targetHeight <= 96) {
+            return MICRO;
+        } else if (targetWidth <= 512 && targetHeight <= 384) {
+            return MINI;
+        }
+        return null;
+    }
+
+    static int getContentProviderExifRotation(ContentResolver contentResolver, Uri uri) {
     Cursor cursor = null;
     try {
       cursor = contentResolver.query(uri, CONTENT_ORIENTATION, null, null, null);
@@ -55,4 +91,19 @@ class ContentProviderBitmapHunter extends ContentStreamBitmapHunter {
       }
     }
   }
+
+    enum PicassoKind {
+        MICRO(MICRO_KIND, 96, 96),
+        MINI(MINI_KIND, 512, 384);
+
+        final int width;
+        final int height;
+        final int kind;
+
+        PicassoKind(int kind, int width, int height) {
+            this.kind = kind;
+            this.width = width;
+            this.height = height;
+        }
+    }
 }
