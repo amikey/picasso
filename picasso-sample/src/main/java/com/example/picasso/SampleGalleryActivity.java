@@ -24,22 +24,30 @@ public class SampleGalleryActivity extends PicassoSampleActivity {
 
     setContentView(R.layout.sample_gallery_activity);
 
-    animator = (ViewAnimator) findViewById(R.id.animator);
-    imageView = (ImageView) findViewById(R.id.image);
+//    animator = (ViewAnimator) findViewById(R.id.animator);
+//    imageView = (ImageView) findViewById(R.id.image);
+//
+//    findViewById(R.id.go).setOnClickListener(new View.OnClickListener() {
+//      @Override public void onClick(View view) {
+//        Intent gallery = new Intent(ACTION_PICK, EXTERNAL_CONTENT_URI);
+//        startActivityForResult(gallery, GALLERY_REQUEST);
+//      }
+//    });
+//
+//    if (savedInstanceState != null) {
+//      image = savedInstanceState.getString(KEY_IMAGE);
+//      if (image != null) {
+//        loadImage();
+//      }
+//    }
 
-    findViewById(R.id.go).setOnClickListener(new View.OnClickListener() {
-      @Override public void onClick(View view) {
-        Intent gallery = new Intent(ACTION_PICK, EXTERNAL_CONTENT_URI);
-        startActivityForResult(gallery, GALLERY_REQUEST);
-      }
-    });
+    ImageView imageView1 = (ImageView) findViewById(R.id.image1);
+    ImageView imageView2 = (ImageView) findViewById(R.id.image2);
 
-    if (savedInstanceState != null) {
-      image = savedInstanceState.getString(KEY_IMAGE);
-      if (image != null) {
-        loadImage();
-      }
-    }
+    Picasso.with(this).setDebugging(true);
+
+    Picasso.with(this).load(R.drawable.download).placeholder(R.drawable.placeholder).resize(218, 192).centerCrop().into(imageView1);
+    Picasso.with(this).load(R.drawable.download).placeholder(R.drawable.placeholder).resize(278, 192).centerCrop().into(imageView2);
   }
 
   @Override protected void onPause() {
