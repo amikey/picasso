@@ -43,9 +43,7 @@ abstract class BitmapHunter implements Runnable {
    * well as potential OOMs. Shamelessly stolen from Volley.
    */
   private static final Object DECODE_LOCK = new Object();
-  private static final String ANDROID_ASSET = "android_asset";
-  protected static final int ASSET_PREFIX_LENGTH =
-      (SCHEME_FILE + ":///" + ANDROID_ASSET + "/").length();
+  protected static final String ANDROID_ASSET = "android_asset";
 
   final Picasso picasso;
   final Dispatcher dispatcher;
@@ -122,12 +120,11 @@ abstract class BitmapHunter implements Runnable {
       }
     }
 
-    bitmap = decode(data);
-
-    if (bitmap != null) {
-      stats.dispatchBitmapDecoded(bitmap);
-      if (data.needsTransformation() || exifRotation != 0) {
-        synchronized (DECODE_LOCK) {
+    synchronized (DECODE_LOCK) {
+      bitmap = decode(data);
+      if (bitmap != null) {
+        stats.dispatchBitmapDecoded(bitmap);
+        if (data.needsTransformation() || exifRotation != 0) {
           if (data.needsMatrixTransform() || exifRotation != 0) {
             bitmap = transformResult(data, bitmap, exifRotation);
           }
