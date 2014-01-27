@@ -1,6 +1,8 @@
 package com.example.picasso;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
+import android.content.res.Resources;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
@@ -29,11 +31,15 @@ final class SampleGridViewAdapter extends BaseAdapter {
   }
 
   @Override public View getView(int position, View convertView, ViewGroup parent) {
-    SquaredImageView view = (SquaredImageView) convertView;
+    AutoStateImageView view = (AutoStateImageView) convertView;
     if (view == null) {
-      view = new SquaredImageView(context);
+      view = new AutoStateImageView(context);
       view.setScaleType(CENTER_CROP);
+      view.setColorFilter(context.getResources().getColorStateList(R.color.color_state_list));
     }
+
+    // Randomly disable a view.
+    view.setEnabled(position %2 == 0);
 
     // Get the image URL for the current position.
     String url = getItem(position);
