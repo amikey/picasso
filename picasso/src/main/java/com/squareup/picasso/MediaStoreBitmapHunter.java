@@ -48,7 +48,7 @@ class MediaStoreBitmapHunter extends ContentStreamBitmapHunter {
     ContentResolver contentResolver = context.getContentResolver();
     setExifRotation(getExitOrientation(contentResolver, data.uri));
     String mimeType = contentResolver.getType(data.uri);
-    boolean isVideo = (mimeType != null && mimeType.startsWith("video/"));
+    boolean isVideo = mimeType != null && mimeType.startsWith("video/");
 
     if (data.hasSize()) {
       PicassoKind picassoKind = getPicassoKind(data.targetWidth, data.targetHeight);
@@ -65,7 +65,7 @@ class MediaStoreBitmapHunter extends ContentStreamBitmapHunter {
       calculateInSampleSize(data.targetWidth, data.targetHeight, picassoKind.width,
           picassoKind.height, options);
 
-      Bitmap result = null;
+      Bitmap result;
 
       if (isVideo) {
         // Since MediaStore doesn't provide the full screen kind thumbnail, we use the mini kind
@@ -73,8 +73,8 @@ class MediaStoreBitmapHunter extends ContentStreamBitmapHunter {
         int kind = (picassoKind == FULL) ? Video.Thumbnails.MINI_KIND : picassoKind.androidKind;
         result = Video.Thumbnails.getThumbnail(contentResolver, id, kind, options);
       } else {
-        result = Images.Thumbnails.getThumbnail(contentResolver, id, picassoKind.androidKind,
-            options);
+        result =
+            Images.Thumbnails.getThumbnail(contentResolver, id, picassoKind.androidKind, options);
       }
 
       if (result != null) {
