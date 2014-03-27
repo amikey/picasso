@@ -35,6 +35,7 @@ import static android.content.ContentResolver.SCHEME_ANDROID_RESOURCE;
 import static android.provider.ContactsContract.Contacts.CONTENT_URI;
 import static android.provider.ContactsContract.Contacts.Photo.CONTENT_DIRECTORY;
 import static com.squareup.picasso.Utils.createKey;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -122,11 +123,11 @@ class TestUtils {
   }
 
   static Action mockAction(String key, Request request, Object target) {
-    Action action = mock(Action.class);
+    Action action = mock(Action.class, RETURNS_DEEP_STUBS);
     when(action.getKey()).thenReturn(key);
     when(action.getData()).thenReturn(request);
     when(action.getTarget()).thenReturn(target);
-    when(action.getPicasso()).thenReturn(mock(Picasso.class));
+    when(action.getPicasso()).thenReturn(mock(Picasso.class, RETURNS_DEEP_STUBS));
     return action;
   }
 

@@ -224,8 +224,12 @@ abstract class BitmapHunter implements Runnable {
     Thread.currentThread().setName(builder.toString());
   }
 
-  static BitmapHunter forRequest(Context context, Picasso picasso, Dispatcher dispatcher,
-      Cache cache, Stats stats, Action action, Downloader downloader) {
+  static BitmapHunter forRequest(Action action, Downloader downloader) {
+    Picasso picasso = action.getPicasso();
+    Context context = picasso.context;
+    Dispatcher dispatcher = picasso.dispatcher;
+    Cache cache = picasso.cache;
+    Stats stats = picasso.stats;
     if (action.getData().resourceId != 0) {
       return new ResourceBitmapHunter(context, picasso, dispatcher, cache, stats, action);
     }
