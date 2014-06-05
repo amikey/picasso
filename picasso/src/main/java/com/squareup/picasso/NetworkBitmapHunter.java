@@ -18,6 +18,7 @@ package com.squareup.picasso;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.NetworkInfo;
+import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -59,16 +60,21 @@ class NetworkBitmapHunter extends BitmapHunter {
     if (is == null) {
       return null;
     }
-    // Sometimes response content length is zero when requests are being replayed. Haven't found
-    // root cause to this but retrying the request seems safe to do so.
-    if (response.getContentLength() == 0) {
-      throw new IOException("Received response with 0 content-length header.");
+
+    long contentLength = response.getContentLength();
+
+    if (loadedFrom == NETWORK && contentLength > 0) {
+      stats.dispatchDownloadFinished(contentLength);
     }
-    if (loadedFrom == NETWORK && response.getContentLength() > 0) {
-      stats.dispatchDownloadFinished(response.getContentLength());
-    }
+
     try {
-      return decodeStream(is, data);
+      Bitmap bitmap = decodeStream(is, data);
+      // Edge case: Sometimes response content length is zero when requests are being replayed.
+      // Haven't found root cause to this but retrying the request seems safe to do so.
+      if (bitmap == null && contentLength == 0) {
+        throw new IOException("Received response with 0 content-length header.");
+      }
+      return bitmap;
     } finally {
       Utils.closeQuietly(is);
     }
