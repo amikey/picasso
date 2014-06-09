@@ -453,8 +453,14 @@ abstract class BitmapHunter implements Runnable {
       matrix.preRotate(exifRotation);
     }
 
+    int finalDrawX = swapDimens ? drawY : drawX;
+    int finalDrawY = swapDimens ? drawX : drawY;
+    int finalDrawWidth = swapDimens ? drawHeight : drawWidth;
+    int finalDrawHeight = swapDimens ? drawWidth : drawHeight;
+
     Bitmap newResult =
-        Bitmap.createBitmap(result, drawX, drawY, drawWidth, drawHeight, matrix, true);
+        Bitmap.createBitmap(result, finalDrawX, finalDrawY, finalDrawWidth, finalDrawHeight, matrix,
+            true);
     if (newResult != result) {
       result.recycle();
       result = newResult;
