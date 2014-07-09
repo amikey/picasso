@@ -19,12 +19,22 @@
   <url>http://github.com/square/picasso</url>
   <inceptionYear>2013</inceptionYear>
 
+  <repositories>
+    <repository>
+      <id>square-android-public</id>
+      <url>https://nexus.corp.squareup.com/content/repositories/android-public</url>
+    </repository>
+  </repositories>
   <scm>
-    <url>http://github.com/square/picasso/</url>
-    <connection>scm:git:git://github.com/square/picasso.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/square/picasso.git</developerConnection>
-    <tag>HEAD</tag>
+    <developerConnection>scm:git:git@git.squareup.com:android/apps.git</developerConnection>
   </scm>
+
+  <!--<scm>-->
+  <!--<url>http://github.com/square/picasso/</url>-->
+  <!--<connection>scm:git:git://github.com/square/picasso.git</connection>-->
+  <!--<developerConnection>scm:git:ssh://git@github.com/square/picasso.git</developerConnection>-->
+  <!--<tag>HEAD</tag>-->
+  <!--</scm>-->
 
   <issueManagement>
     <system>GitHub Issues</system>
@@ -58,9 +68,10 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>com.google.android</groupId>
+        <groupId>android</groupId>
         <artifactId>android</artifactId>
-        <version>4.1.1.4</version>
+        <version>4.4.2_r3</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>com.google.android</groupId>

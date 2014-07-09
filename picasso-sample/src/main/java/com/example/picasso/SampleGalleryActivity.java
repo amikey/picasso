@@ -7,8 +7,6 @@ import android.widget.ImageView;
 import android.widget.ViewAnimator;
 import com.squareup.picasso.Picasso;
 
-import static android.content.Intent.ACTION_PICK;
-import static android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
 import static com.squareup.picasso.Callback.EmptyCallback;
 
 public class SampleGalleryActivity extends PicassoSampleActivity {
@@ -29,8 +27,10 @@ public class SampleGalleryActivity extends PicassoSampleActivity {
 
     findViewById(R.id.go).setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) {
-        Intent gallery = new Intent(ACTION_PICK, EXTERNAL_CONTENT_URI);
-        startActivityForResult(gallery, GALLERY_REQUEST);
+        Intent intent = new Intent();
+        intent.setType("image/*");
+        intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+        startActivityForResult(intent, GALLERY_REQUEST);
       }
     });
 
@@ -71,7 +71,7 @@ public class SampleGalleryActivity extends PicassoSampleActivity {
     // Index 1 is the progress bar. Show it while we're loading the image.
     animator.setDisplayedChild(1);
 
-    Picasso.with(this).load(image).into(imageView, new EmptyCallback() {
+    Picasso.with(this).load(image).fit().skipMemoryCache().into(imageView, new EmptyCallback() {
       @Override public void onSuccess() {
         // Index 0 is the image view.
         animator.setDisplayedChild(0);

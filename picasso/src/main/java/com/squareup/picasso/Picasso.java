@@ -470,7 +470,11 @@ public class Picasso {
     if (singleton == null) {
       synchronized (Picasso.class) {
         if (singleton == null) {
-          singleton = new Builder(context).build();
+          singleton = new Builder(context).listener(new Listener() {
+            @Override public void onImageLoadFailed(Picasso picasso, Uri uri, Exception exception) {
+              exception.printStackTrace();
+            }
+          }).build();
         }
       }
     }
