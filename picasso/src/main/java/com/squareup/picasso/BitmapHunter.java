@@ -21,7 +21,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.net.NetworkInfo;
 import android.net.Uri;
-import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -290,8 +289,6 @@ abstract class BitmapHunter implements Runnable {
         return new ContactsPhotoBitmapHunter(context, picasso, dispatcher, cache, stats, action);
       } else if (MediaStore.AUTHORITY.equals(uri.getAuthority())) {
         return new MediaStoreBitmapHunter(context, picasso, dispatcher, cache, stats, action);
-      } else if (DocumentsContract.isDocumentUri(context, uri)) {
-        return new DocumentBitmapHunter(context, picasso, dispatcher, cache, stats, action);
       } else {
         return new ContentStreamBitmapHunter(context, picasso, dispatcher, cache, stats, action);
       }
