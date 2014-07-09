@@ -21,10 +21,14 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Looper;
 import android.os.Process;
 import android.os.StatFs;
+import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
 import java.io.ByteArrayOutputStream;
@@ -93,6 +97,10 @@ final class Utils {
   private static final int WEBP_FILE_HEADER_SIZE = 12;
   private static final String WEBP_FILE_HEADER_RIFF = "RIFF";
   private static final String WEBP_FILE_HEADER_WEBP = "WEBP";
+
+  private static final String[] CONTENT_ORIENTATION = new String[] {
+      MediaStore.Images.ImageColumns.ORIENTATION
+  };
 
   private Utils() {
     // No instances.
@@ -251,8 +259,7 @@ final class Utils {
           + "Note that OkHttp 2.0.0+ is supported!");
     }
 
-    return okHttpClient
-        ? OkHttpLoaderCreator.create(context)
+    return okHttpClient ? OkHttpLoaderCreator.create(context)
         : new UrlConnectionDownloader(context);
   }
 
@@ -367,6 +374,33 @@ final class Utils {
       return pm.getResourcesForApplication(pkg);
     } catch (PackageManager.NameNotFoundException e) {
       throw new FileNotFoundException("Unable to obtain resources for package: " + data.uri);
+    }
+  }
+
+  static int getExifOrientation(Context context, Uri uri) {
+    ContentResolver contentResolver = context.getContentResolver();
+    Cursor cursor = null;
+    try {
+      if (DocumentsContract.isDocumentUri(context, uri)) {
+        String id = DocumentsContract.getDocumentId(uri);
+        id = id.split(":")[1];
+        cursor =
+            contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, CONTENT_ORIENTATION,
+                MediaStore.Images.Media._ID + " = ?", new String[] { id }, null);
+      } else {
+        cursor = contentResolver.query(uri, CONTENT_ORIENTATION, null, null, null);
+      }
+      if (cursor == null || !cursor.moveToFirst()) {
+        return 0;
+      }
+      return cursor.getInt(0);
+    } catch (RuntimeException ignored) {
+      // If the orientation column doesn't exist, assume no rotation.
+      return 0;
+    } finally {
+      if (cursor != null) {
+        cursor.close();
+      }
     }
   }
 
